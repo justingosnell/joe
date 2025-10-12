@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A responsive three-column website built with Tailwind CSS, optimized for SEO and accessibility.">
+    <meta name="keywords" content="website, Tailwind CSS, three-column layout, SEO, accessibility">
+    <meta name="author" content="Your Name or Organization">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#2563eb">
+
+    <!-- Open Graph Tags for Social Media -->
+    <meta property="og:title" content="Three Column Website Template">
+    <meta property="og:description" content="A responsive, SEO-optimized, and accessible website template using Tailwind CSS.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://yourwebsite.com">
+    <meta property="og:image" content="https://yourwebsite.com/images/preview.jpg">
+    <meta property="og:site_name" content="Your Website Name">
+
+    <!-- Twitter Card Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Three Column Website Template">
+    <meta name="twitter:description" content="A responsive, SEO-optimized, and accessible website template using Tailwind CSS.">
+    <meta name="twitter:image" content="https://yourwebsite.com/images/preview.jpg">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+    <!-- Tailwind CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+    <!-- Schema.org JSON-LD for SEO -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Your Website Name",
+        "url": "https://yourwebsite.com",
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://yourwebsite.com/search?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+        }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Your Organization",
+        "url": "https://yourwebsite.com",
+        "logo": "https://yourwebsite.com/images/logo.png",
+        "contactPoint": {
+            "@type": "ContactPoint",
+            "telephone": "+1-123-456-7890",
+            "contactType": "customer service",
+            "email": "contact@yourwebsite.com"
+        },
+        "sameAs": [
+            "https://twitter.com/yourhandle",
+            "https://facebook.com/yourpage",
+            "https://linkedin.com/company/yourcompany"
+        ]
+    }
+    </script>
+
+    <title>Three Column Website Template</title>
+</head>
+<body class="bg-gray-100 font-sans antialiased">
+    <!-- Skip Link for Accessibility -->
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:bg-blue-600 focus:text-white focus:px-4 focus:py-2">Skip to main content</a>
+
+    <!-- Header -->
+    <header class="bg-blue-600 text-white py-4" role="banner">
+        <div class="container mx-auto px-4">
+            <h1 class="text-3xl font-bold">Your Website Name</h1>
+            <nav aria-label="Main navigation">
+                <ul class="flex space-x-4 mt-2">
+                    <li><a href="/" class="hover:underline focus:outline-none focus:ring-2 focus:ring-white" aria-current="page">Home</a></li>
+                    <li><a href="/about" class="hover:underline focus:outline-none focus:ring-2 focus:ring-white">About</a></li>
+                    <li><a href="/services" class="hover:underline focus:outline-none focus:ring-2 focus:ring-white">Services</a></li>
+                    <li><a href="/contact" class="hover:underline focus:outline-none focus:ring-2 focus:ring-white">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="container mx-auto px-4 py-8" role="main">
+        <div class="flex flex-col md:flex-row gap-6">
+            <!-- Left Column (Sidebar) - Dynamic Tagged Places -->
+            <aside class="md:w-1/4 bg-white p-6 rounded-lg shadow-md" role="complementary" aria-label="Sidebar navigation">
+                <h2 class="text-xl font-semibold mb-4">Tagged Places</h2>
+                <ul id="tagged-places-list" class="space-y-2" aria-live="polite">
+                    <!-- Dynamic list populated by JS -->
+                    <li class="loading">Loading places...</li>
+                </ul>
+            </aside>
+
+            <!-- Center Column (Main Content) -->
+            <section class="md:w-2/4 bg-white p-6 rounded-lg shadow-md" aria-label="Main content">
+                <h2 class="text-xl font-semibold mb-4">Main Content</h2>
+                <article>
+                    <p class="mb-4">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+                    <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+                </article>
+            </section>
+
+            <!-- Right Column (Additional Info) -->
+            <aside class="md:w-1/4 bg-white p-6 rounded-lg shadow-md" role="complementary" aria-label="Additional information">
+                <h2 class="text-xl font-semibold mb-4">Additional Info</h2>
+                <p class="mb-4">This is the right sidebar where you can add widgets, ads, or other information.</p>
+                <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600" aria-label="Call to action button">Call to Action</button>
+            </aside>
+        </div>
+    </main>
+
+    <!-- Modal for Photo Display -->
+    <div id="photo-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="bg-white p-6 rounded-lg max-w-lg w-full mx-4 max-h-screen overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modal-title" class="text-xl font-semibold">Tagged Photo</h3>
+                <button id="close-modal" class="text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-600" aria-label="Close modal">&times;</button>
+            </div>
+            <img id="modal-image" src="" alt="Associated Facebook photo" class="w-full h-auto rounded mb-4" loading="lazy">
+            <div id="modal-location" class="text-sm text-gray-600"></div>
+            <button id="close-modal-btn" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600">Close</button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-4" role="contentinfo">
+        <div class="container mx-auto px-4">
+            <p class="text-center">&copy; 2025 Your Website. All rights reserved.</p>
+            <nav aria-label="Footer navigation">
+                <ul class="flex justify-center space-x-4 mt-2">
+                    <li><a href="/privacy" class="hover:underline focus:outline-none focus:ring-2 focus:ring-white">Privacy Policy</a></li>
+                    <li><a href="/terms" class="hover:underline focus:outline-none focus:ring-2 focus:ring-white">Terms of Service</a></li>
+                </ul>
+            </nav>
+        </div>
+    </footer>
+
+    <!-- Schema.org JSON-LD for Breadcrumbs -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": "https://yourwebsite.com"
+            },
+            {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Main Content",
+                "item": "https://yourwebsite.com#main-content"
+            }
+        ]
+    }
+    </script>
+
+    <!-- JavaScript for Real API Fetch and Modal -->
+    <script>
+        // Configuration - Replace with your actual values
+        const PAGE_ID = 'YOUR_PAGE_ID'; // e.g., '1234567890' - Your Facebook Page ID
+        const ACCESS_TOKEN = 'YOUR_ACCESS_TOKEN'; // e.g., 'EAA...XYZ' - Page Access Token with pages_read_engagement
+
+        // Function to fetch data from Facebook Graph API
+        async function fetchTaggedPlaces() {
+            try {
+                const apiUrl = `https://graph.facebook.com/v19.0/${PAGE_ID}/photos?fields=place,name,picture&access_token=${ACCESS_TOKEN}&limit=10`;
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status} - ${response.statusText}`);
+                }
+                const data = await response.json();
+
+                // Filter for photos with a place tag and map to required format
+                const taggedPlaces = data.data
+                    .filter(photo => photo.place) // Only photos with location
+                    .slice(0, 10) // Limit to 10 for demo
+                    .map(photo => ({
+                        place: photo.place.name || 'Unknown Place',
+                        image: photo.picture,
+                        location: [
+                            photo.place.location?.street || '',
+                            photo.place.location?.city || '',
+                            photo.place.location?.country || ''
+                        ].filter(Boolean).join(', ') || photo.place.name
+                    }));
+
+                if (taggedPlaces.length === 0) {
+                    console.warn('No location-tagged photos found on the page.');
+                }
+
+                return taggedPlaces;
+            } catch (error) {
+                console.error('Error fetching tagged places from Facebook API:', error);
+                // Fallback to empty array or mock if desired
+                return [];
+            }
+        }
+
+        // Populate list
+        async function loadPlaces() {
+            const list = document.getElementById('tagged-places-list');
+            list.innerHTML = '<li class="text-gray-500">Loading places...</li>'; // Show loading
+            const places = await fetchTaggedPlaces();
+            list.innerHTML = places.length > 0 
+                ? places.map(place => `
+                    <li>
+                        <button class="w-full text-left text-blue-600 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-600 p-2 rounded" 
+                                data-place="${place.place}" data-image="${place.image}" data-location="${place.location}" aria-label="View photo at ${place.place}">
+                            ${place.place}
+                        </button>
+                    </li>
+                  `).join('')
+                : '<li class="text-gray-500">No tagged places found.</li>';
+        }
+
+        // Modal functionality
+        function openModal(place, image, location) {
+            const modal = document.getElementById('photo-modal');
+            const modalImage = document.getElementById('modal-image');
+            const modalLocation = document.getElementById('modal-location');
+            document.getElementById('modal-title').textContent = `Photo at ${place}`;
+            modalImage.src = image;
+            modalImage.alt = `Photo tagged at ${place}`;
+            modalLocation.textContent = location;
+            modal.classList.remove('hidden');
+            modal.focus(); // Accessibility: Focus on modal for screen readers
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('photo-modal');
+            modal.classList.add('hidden');
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPlaces();
+            document.getElementById('close-modal').addEventListener('click', closeModal);
+            document.getElementById('close-modal-btn').addEventListener('click', closeModal);
+            document.getElementById('photo-modal').addEventListener('click', (e) => {
+                if (e.target.id === 'photo-modal') closeModal();
+            });
+
+            // Keyboard support for modal
+            document.getElementById('photo-modal').addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') closeModal();
+            });
+
+            // Delegate clicks for dynamic buttons
+            document.getElementById('tagged-places-list').addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    const place = e.target.dataset.place;
+                    const image = e.target.dataset.image;
+                    const location = e.target.dataset.location;
+                    openModal(place, image, location);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
