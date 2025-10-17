@@ -1,222 +1,286 @@
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { AppHeader } from "@/components/AppHeader";
-import { CategoryFilter, type CategoryType } from "@/components/CategoryFilter";
-import { StateFilter } from "@/components/StateFilter";
-import { USMap } from "@/components/USMap";
-import { PhotoPanel } from "@/components/PhotoPanel";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Search, MapPin, Camera, TrendingUp, Sparkles, Signpost } from "lucide-react";
+import { MediaSlideshow } from "@/components/MediaSlideshow";
 import type { Location } from "@shared/schema";
 
-//todo: remove mock functionality - Replace with real Facebook Graph API data
-const MOCK_LOCATIONS: Location[] = [
-  {
-    id: "1",
-    name: "Giant Muffler Man - Wilmington",
-    latitude: 41.3083,
-    longitude: -88.1467,
-    category: "muffler-men",
-    state: "Illinois",
-    photoUrl: "https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?w=800",
-    photoId: "fb_001",
-    taggedDate: "2024-06-15",
-  },
-  {
-    id: "2",
-    name: "World's Largest Ball of Twine",
-    latitude: 39.2026,
-    longitude: -98.4842,
-    category: "worlds-largest",
-    state: "Kansas",
-    photoUrl: "https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=800",
-    photoId: "fb_002",
-    taggedDate: "2024-07-20",
-  },
-  {
-    id: "3",
-    name: "Cowboy Muffler Man",
-    latitude: 32.7767,
-    longitude: -96.7970,
-    category: "muffler-men",
-    state: "Texas",
-    photoUrl: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800",
-    photoId: "fb_003",
-    taggedDate: "2024-08-10",
-  },
-  {
-    id: "4",
-    name: "World's Largest Thermometer",
-    latitude: 35.5944,
-    longitude: -116.0733,
-    category: "worlds-largest",
-    state: "California",
-    photoUrl: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=800",
-    photoId: "fb_004",
-    taggedDate: "2024-05-12",
-  },
-  {
-    id: "5",
-    name: "Paul Bunyan Muffler Man",
-    latitude: 44.8521,
-    longitude: -93.2421,
-    category: "muffler-men",
-    state: "Minnesota",
-    photoUrl: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800",
-    photoId: "fb_005",
-    taggedDate: "2024-09-03",
-  },
-  {
-    id: "6",
-    name: "World's Largest Rocking Chair",
-    latitude: 38.8183,
-    longitude: -90.6906,
-    category: "worlds-largest",
-    state: "Missouri",
-    photoUrl: "https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=800",
-    photoId: "fb_006",
-    taggedDate: "2024-04-25",
-  },
-  {
-    id: "7",
-    name: "Uniroyal Gal Muffler Woman",
-    latitude: 33.4484,
-    longitude: -112.0740,
-    category: "muffler-men",
-    state: "Arizona",
-    photoUrl: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800",
-    photoId: "fb_007",
-    taggedDate: "2024-03-18",
-  },
-  {
-    id: "8",
-    name: "World's Largest Catsup Bottle",
-    latitude: 38.6270,
-    longitude: -90.1994,
-    category: "worlds-largest",
-    state: "Illinois",
-    photoUrl: "https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=800",
-    photoId: "fb_008",
-    taggedDate: "2024-10-05",
-  },
-  {
-    id: "9",
-    name: "Gemini Giant Muffler Man",
-    latitude: 41.1520,
-    longitude: -88.1792,
-    category: "muffler-men",
-    state: "Illinois",
-    photoUrl: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800",
-    photoId: "fb_009",
-    taggedDate: "2024-02-14",
-  },
-  {
-    id: "10",
-    name: "World's Largest Mailbox",
-    latitude: 41.2565,
-    longitude: -95.9345,
-    category: "worlds-largest",
-    state: "Nebraska",
-    photoUrl: "https://images.unsplash.com/photo-1605379399642-870262d3d051?w=800",
-    photoId: "fb_010",
-    taggedDate: "2024-01-22",
-  },
-  {
-    id: "11",
-    name: "World's Largest Peanut",
-    latitude: 33.4754,
-    longitude: -84.4491,
-    category: "worlds-largest",
-    state: "Georgia",
-    photoUrl: "https://images.unsplash.com/photo-1587620962725-abab7fe55159?w=800",
-    photoId: "fb_011",
-    taggedDate: "2023-12-08",
-  },
-  {
-    id: "12",
-    name: "Chicken Boy Muffler Man",
-    latitude: 34.0522,
-    longitude: -118.2437,
-    category: "muffler-men",
-    state: "California",
-    photoUrl: "https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?w=800",
-    photoId: "fb_012",
-    taggedDate: "2023-11-17",
-  },
-];
-
 export default function Home() {
-  const [activeCategory, setActiveCategory] = useState<CategoryType>("all");
-  const [selectedState, setSelectedState] = useState<string>("");
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
-  const [isConnected] = useState(true); //todo: remove mock functionality - Replace with real Facebook connection status
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredLocations = useMemo(() => {
-    let filtered = MOCK_LOCATIONS;
+  // Fetch locations from API
+  const { data: locations = [], isLoading } = useQuery<Location[]>({
+    queryKey: ["locations"],
+    queryFn: async () => {
+      const response = await fetch("/api/locations");
+      if (!response.ok) throw new Error("Failed to fetch locations");
+      return response.json();
+    },
+  });
 
-    if (activeCategory !== "all") {
-      filtered = filtered.filter((loc) => loc.category === activeCategory);
-    }
+  // Get featured locations (first 4 with images)
+  const featuredLocations = useMemo(() => {
+    return locations
+      .filter(loc => loc.imageUrl)
+      .slice(0, 4);
+  }, [locations]);
 
-    if (selectedState) {
-      filtered = filtered.filter((loc) => loc.state === selectedState);
-    }
+  // Get latest additions (most recent 6)
+  const latestLocations = useMemo(() => {
+    return [...locations]
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, 6);
+  }, [locations]);
 
-    return filtered;
-  }, [activeCategory, selectedState]);
+  // Category collections - hardcoded
+  const categoryCollections = useMemo(() => {
+    return [
+      {
+        title: "Muffler Men",
+        description: "Giant fiberglass figures that once advertised businesses",
+        category: "muffler-men",
+        count: locations.filter(loc => loc.category === "muffler-men").length,
+        icon: "🗿",
+        color: "#f97316",
+      },
+      {
+        title: "World's Largest",
+        description: "Oversized objects claiming to be the biggest",
+        category: "worlds-largest",
+        count: locations.filter(loc => loc.category === "worlds-largest").length,
+        icon: "🏆",
+        color: "#eab308",
+      },
+      {
+        title: "Unique Finds",
+        description: "One-of-a-kind oddities and curiosities",
+        category: "unique-finds",
+        count: locations.filter(loc => loc.category === "unique-finds").length,
+        icon: "✨",
+        color: "#10b981",
+      },
+    ];
+  }, [locations]);
 
-  const categoryCounts = useMemo(() => {
-    return {
-      all: MOCK_LOCATIONS.length,
-      "muffler-men": MOCK_LOCATIONS.filter((loc) => loc.category === "muffler-men").length,
-      "worlds-largest": MOCK_LOCATIONS.filter((loc) => loc.category === "worlds-largest").length,
-    };
-  }, []);
+  // Search functionality
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    
+    const query = searchQuery.toLowerCase();
+    return locations.filter(loc => 
+      loc.name.toLowerCase().includes(query) ||
+      loc.description?.toLowerCase().includes(query) ||
+      loc.city.toLowerCase().includes(query) ||
+      loc.state.toLowerCase().includes(query)
+    ).slice(0, 8);
+  }, [locations, searchQuery]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading attractions...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-screen">
-      <AppHeader 
-        isConnected={isConnected}
-        onConnectFacebook={() => console.log("Connect Facebook")} //todo: remove mock functionality
-      />
+    <div className="min-h-screen bg-gradient-to-b from-amber-50 via-orange-50 to-yellow-50">
+      <AppHeader />
 
-      <main id="main-content" className="flex-1 overflow-hidden" role="main">
-        <div className="h-full flex flex-col md:flex-row gap-0">
-          <aside 
-            className="md:w-1/4 bg-background border-r overflow-hidden" 
-            role="complementary" 
-            aria-label="Category filters"
-          >
-            <CategoryFilter
-              activeCategory={activeCategory}
-              onCategoryChange={setActiveCategory}
-              categoryCounts={categoryCounts}
-            />
-          </aside>
+      <main className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* Hero Section */}
+        <section className="text-center mb-12 py-8">
+          <p className="text-xl text-amber-800 mb-8 max-w-2xl mx-auto">
+            Discover America's most peculiar landmarks, oversized oddities, and forgotten wonders
+          </p>
+          
+          {/* Stats */}
+          <div className="flex justify-center gap-8 mb-8">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-orange-600">{locations.length}</div>
+              <div className="text-sm text-amber-700">Attractions</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-orange-600">
+                {new Set(locations.map(l => l.state)).size}
+              </div>
+              <div className="text-sm text-amber-700">States</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-orange-600">
+                {locations.filter(l => l.imageUrl).length}
+              </div>
+              <div className="text-sm text-amber-700">Photos</div>
+            </div>
+          </div>
+        </section>
 
-          <section className="md:w-2/4 relative" aria-label="Interactive map">
-            <USMap
-              locations={filteredLocations}
-              activeCategory={activeCategory}
-              selectedLocation={selectedLocation}
-              onLocationClick={setSelectedLocation}
-            />
+        {/* Slideshow Section */}
+        <section className="mb-12">
+          <MediaSlideshow />
+        </section>
+
+        {/* Featured Attractions Carousel */}
+        {featuredLocations.length > 0 && (
+          <section className="mb-12">
+            <h2 className="text-3xl font-bold mb-6 text-amber-900 flex items-center gap-2">
+              <Sparkles className="h-7 w-7 text-orange-500" />
+              Featured Attractions
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {featuredLocations.map((location) => (
+                <Card
+                  key={location.id}
+                  className="overflow-hidden border-2 border-amber-200 hover:border-orange-400 transition-all hover:shadow-xl cursor-pointer group"
+                >
+                  <div className="relative h-48 overflow-hidden bg-amber-100">
+                    <img
+                      src={location.imageUrl!}
+                      alt={location.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                    <Badge className="absolute top-2 right-2 bg-orange-500 text-white">
+                      {location.category.replace("-", " ")}
+                    </Badge>
+                  </div>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg text-amber-900 line-clamp-2">
+                      {location.name}
+                    </CardTitle>
+                    <CardDescription className="flex items-center gap-1 text-amber-700">
+                      <MapPin className="h-3 w-3" />
+                      {location.city}, {location.state}
+                    </CardDescription>
+                  </CardHeader>
+                  {location.description && (
+                    <CardContent className="pt-0">
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {location.description}
+                      </p>
+                    </CardContent>
+                  )}
+                </Card>
+              ))}
+            </div>
           </section>
+        )}
 
-          <aside 
-            className="md:w-1/4 bg-background border-l overflow-hidden" 
-            role="complementary" 
-            aria-label="State filters"
-          >
-            <StateFilter
-              selectedState={selectedState}
-              onStateChange={setSelectedState}
-            />
-          </aside>
-        </div>
+        {/* Category Collections */}
+        <section className="mb-12">
+          <h2 className="text-3xl font-bold mb-6 text-amber-900">Quirky Collections</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {categoryCollections.map((collection) => (
+              <Card
+                key={collection.category}
+                className="border-2 border-amber-200 hover:border-orange-400 transition-all hover:shadow-xl cursor-pointer group bg-white/80 backdrop-blur"
+              >
+                <CardHeader>
+                  <div className="text-5xl mb-3 group-hover:scale-110 transition-transform">
+                    {collection.icon}
+                  </div>
+                  <CardTitle className="text-xl text-amber-900">
+                    {collection.title}
+                  </CardTitle>
+                  <CardDescription className="text-amber-700">
+                    {collection.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl font-bold text-orange-600">
+                      {collection.count}
+                    </span>
+                    <Button variant="outline" className="border-orange-300 text-orange-700 hover:bg-orange-50">
+                      Explore →
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        {/* Latest Additions */}
+        <section className="mb-12">
+          <h2 className="text-3xl font-bold mb-6 text-amber-900 flex items-center gap-2">
+            <TrendingUp className="h-7 w-7 text-orange-500" />
+            Latest Additions
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {latestLocations.map((location) => (
+              <Card
+                key={location.id}
+                className="border border-amber-200 hover:border-orange-300 transition-all hover:shadow-md cursor-pointer group"
+              >
+                <CardContent className="p-4">
+                  <div className="flex gap-3">
+                    {location.imageUrl ? (
+                      <img
+                        src={location.imageUrl}
+                        alt={location.name}
+                        className="w-20 h-20 object-cover rounded flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 bg-amber-100 rounded flex items-center justify-center flex-shrink-0">
+                        <Camera className="h-8 w-8 text-amber-400" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-amber-900 line-clamp-1 group-hover:text-orange-600 transition-colors">
+                        {location.name}
+                      </h4>
+                      <p className="text-sm text-amber-700 flex items-center gap-1 mt-1">
+                        <MapPin className="h-3 w-3" />
+                        {location.city}, {location.state}
+                      </p>
+                      <Badge variant="secondary" className="mt-2 bg-orange-100 text-orange-700 text-xs">
+                        {location.category.replace("-", " ")}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        {/* Call to Action */}
+        <section className="text-center py-12">
+          <Card className="border-2 border-orange-300 bg-gradient-to-br from-orange-100 to-amber-100 shadow-xl">
+            <CardHeader>
+              <CardTitle className="text-3xl text-amber-900">
+                Know of an Offbeat Sight?
+              </CardTitle>
+              <CardDescription className="text-lg text-amber-800">
+                Help us document America's roadside wonders. Share your discoveries!
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button size="lg" className="bg-orange-500 hover:bg-orange-600 text-white text-lg px-8">
+                Submit a Tip
+              </Button>
+            </CardContent>
+          </Card>
+        </section>
       </main>
 
-      <PhotoPanel
-        location={selectedLocation}
-        onClose={() => setSelectedLocation(null)}
-      />
+      {/* Footer */}
+      <footer className="bg-amber-900 text-amber-100 py-8 mt-12">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-lg mb-2">RoadsideMapper</p>
+          <p className="text-sm text-amber-300">
+            Documenting America's quirky roadside attractions, one oddity at a time.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

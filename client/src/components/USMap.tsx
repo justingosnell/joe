@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import type { Location } from "@shared/schema";
-import type { CategoryType } from "./CategorySidebar";
+import type { CategoryType } from "./CategoryFilter";
 
 interface USMapProps {
   locations: Location[];
@@ -11,15 +11,18 @@ interface USMapProps {
   onLocationClick: (location: Location) => void;
 }
 
+// Hardcoded category colors
+const categoryColors: Record<string, string> = {
+  "muffler-men": "#f97316",
+  "worlds-largest": "#eab308",
+  "unique-finds": "#10b981",
+};
+
 function createCustomIcon(category: string, isSelected: boolean) {
-  let color = "#3b82f6";
+  let color = categoryColors[category] || "#3b82f6"; // Default blue if category not found
   
   if (isSelected) {
-    color = "#a855f7";
-  } else if (category === "muffler-men") {
-    color = "#f97316";
-  } else if (category === "worlds-largest") {
-    color = "#10b981";
+    color = "#a855f7"; // Purple for selected
   }
 
   const svgIcon = `

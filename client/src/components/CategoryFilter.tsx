@@ -1,8 +1,8 @@
-import { Users, Landmark, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-export type CategoryType = "all" | "muffler-men" | "worlds-largest";
+export type CategoryType = "all" | "muffler-men" | "worlds-largest" | "unique-finds";
 
 interface CategoryFilterProps {
   activeCategory: CategoryType;
@@ -11,8 +11,15 @@ interface CategoryFilterProps {
     all: number;
     "muffler-men": number;
     "worlds-largest": number;
+    "unique-finds": number;
   };
 }
+
+const categories = [
+  { id: "muffler-men", label: "Muffler Men", icon: "🗿" },
+  { id: "worlds-largest", label: "World's Largest", icon: "🏆" },
+  { id: "unique-finds", label: "Unique Finds", icon: "✨" },
+] as const;
 
 export function CategoryFilter({
   activeCategory,
@@ -42,31 +49,21 @@ export function CategoryFilter({
           </Badge>
         </Button>
 
-        <Button
-          variant={activeCategory === "muffler-men" ? "default" : "ghost"}
-          className="w-full justify-start"
-          onClick={() => onCategoryChange("muffler-men")}
-          data-testid="button-category-muffler"
-        >
-          <Users className="h-4 w-4 mr-2" />
-          Muffler Men
-          <Badge variant="secondary" className="ml-auto">
-            {categoryCounts["muffler-men"]}
-          </Badge>
-        </Button>
-
-        <Button
-          variant={activeCategory === "worlds-largest" ? "default" : "ghost"}
-          className="w-full justify-start"
-          onClick={() => onCategoryChange("worlds-largest")}
-          data-testid="button-category-worlds-largest"
-        >
-          <Landmark className="h-4 w-4 mr-2" />
-          World's Largest
-          <Badge variant="secondary" className="ml-auto">
-            {categoryCounts["worlds-largest"]}
-          </Badge>
-        </Button>
+        {categories.map((category) => (
+          <Button
+            key={category.id}
+            variant={activeCategory === category.id ? "default" : "ghost"}
+            className="w-full justify-start"
+            onClick={() => onCategoryChange(category.id as CategoryType)}
+            data-testid={`button-category-${category.id}`}
+          >
+            <span className="mr-2 text-base">{category.icon}</span>
+            {category.label}
+            <Badge variant="secondary" className="ml-auto">
+              {categoryCounts[category.id]}
+            </Badge>
+          </Button>
+        ))}
       </div>
 
       {activeCategory !== "all" && (

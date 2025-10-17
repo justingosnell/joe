@@ -15,6 +15,9 @@ pnpm-debug.log*
 *.log
 /.turbo
 
+# Uploads
+uploads/
+
 # TypeScript
 .tsbuildinfo
 
