@@ -10,3 +10,7 @@ services:
         value: production
       - key: PORT
         value: 3000
+    nixpacks:
+      aptPackages:
+        - build-essential
+        - python3
