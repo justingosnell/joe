@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, Plus, MapPin, Search, X, Image as ImageIcon, Upload, FileUp, FolderTree } from "lucide-react";
+import { LogOut, Plus, MapPin, Search, X, Image as ImageIcon, Upload, FileUp, FolderTree, Home } from "lucide-react";
 import { LocationTable } from "@/components/LocationTable";
 import { LocationDialog } from "@/components/LocationDialog";
 import { MediaLibrary } from "@/components/MediaLibrary";
@@ -203,10 +203,10 @@ export default function Admin() {
                 <span className="hidden sm:inline">Change Logo</span>
                 <span className="sm:hidden">Logo</span>
               </Button>
-              <Button variant="outline" onClick={() => setLocation("/map")} className="flex-1 sm:flex-none">
-                <MapPin className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">View Map</span>
-                <span className="sm:hidden">Map</span>
+              <Button variant="outline" onClick={() => setLocation("/")} className="flex-1 sm:flex-none">
+                <Home className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Home</span>
+                <span className="sm:hidden">Home</span>
               </Button>
               <Button variant="outline" onClick={handleLogout} className="flex-1 sm:flex-none">
                 <LogOut className="mr-2 h-4 w-4" />

@@ -1,7 +1,8 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertLocationSchema, type InsertLocation, type Location, type Media } from "@shared/schema";
+import { insertLocationSchema, type InsertLocation, type Location, type Media, type Category } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -51,7 +52,8 @@ const US_STATES = [
   "Wisconsin", "Wyoming"
 ];
 
-const CATEGORIES = [
+// Default categories as fallback
+const DEFAULT_CATEGORIES = [
   { value: "muffler-men", label: "Muffler Men", icon: "🗿" },
   { value: "worlds-largest", label: "World's Largest", icon: "🏆" },
   { value: "unique-finds", label: "Unique Finds", icon: "✨" },
@@ -75,6 +77,28 @@ export function LocationDialog({
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Fetch categories from API
+  const { data: categories = DEFAULT_CATEGORIES } = useQuery<Category[]>({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const response = await fetch("/api/categories");
+      if (!response.ok) throw new Error("Failed to fetch categories");
+      return response.json();
+    },
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+
+  // Convert categories to the format needed for the select
+  const categoryOptions = useMemo(
+    () =>
+      categories.map((cat) => ({
+        value: cat.slug,
+        label: cat.name,
+        icon: cat.icon,
+      })),
+    [categories]
+  );
   
   const form = useForm<InsertLocation>({
     resolver: zodResolver(insertLocationSchema),
@@ -133,7 +157,7 @@ export function LocationDialog({
           name: "",
           latitude: 0,
           longitude: 0,
-          category: CATEGORIES[0]?.value || "muffler-men",
+          category: categoryOptions[0]?.value || "muffler-men",
           state: "",
           city: "",
           zipCode: "",
@@ -145,7 +169,7 @@ export function LocationDialog({
         });
       }
     }
-  }, [open, location, form]);
+  }, [open, location, categoryOptions]);
 
   const handleSubmit = (data: InsertLocation) => {
     // Convert custom fields array to JSON string
@@ -296,7 +320,6 @@ export function LocationDialog({
                     <Select 
                       onValueChange={field.onChange} 
                       value={field.value}
-                      defaultValue={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -304,7 +327,7 @@ export function LocationDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {CATEGORIES.map((category) => (
+                        {categoryOptions.map((category) => (
                           <SelectItem key={category.value} value={category.value}>
                             {category.icon} {category.label}
                           </SelectItem>
@@ -325,7 +348,6 @@ export function LocationDialog({
                     <Select 
                       onValueChange={field.onChange} 
                       value={field.value}
-                      defaultValue={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>

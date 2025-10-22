@@ -5,10 +5,10 @@ import { CategoryFilter, type CategoryType } from "@/components/CategoryFilter";
 import { StateFilter } from "@/components/StateFilter";
 import { USMap } from "@/components/USMap";
 import { PhotoPanel } from "@/components/PhotoPanel";
-import type { Location } from "@shared/schema";
+import type { Location, Category } from "@shared/schema";
 
 export default function Home() {
-  const [activeCategory, setActiveCategory] = useState<CategoryType>("all");
+  const [activeCategory, setActiveCategory] = useState<string>("all");
   const [selectedState, setSelectedState] = useState<string>("");
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
 
@@ -18,6 +18,16 @@ export default function Home() {
     queryFn: async () => {
       const response = await fetch("/api/locations");
       if (!response.ok) throw new Error("Failed to fetch locations");
+      return response.json();
+    },
+  });
+
+  // Fetch categories from API
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const response = await fetch("/api/categories");
+      if (!response.ok) throw new Error("Failed to fetch categories");
       return response.json();
     },
   });
@@ -37,13 +47,15 @@ export default function Home() {
   }, [locations, activeCategory, selectedState]);
 
   const categoryCounts = useMemo(() => {
-    return {
-      all: locations.length,
-      "muffler-men": locations.filter(loc => loc.category === "muffler-men").length,
-      "worlds-largest": locations.filter(loc => loc.category === "worlds-largest").length,
-      "unique-finds": locations.filter(loc => loc.category === "unique-finds").length,
-    };
-  }, [locations]);
+    const counts: Record<string, number> = { all: locations.length };
+    
+    // Dynamically count locations for each category
+    categories.forEach((cat) => {
+      counts[cat.slug] = locations.filter(loc => loc.category === cat.slug).length;
+    });
+    
+    return counts;
+  }, [locations, categories]);
 
   if (isLoading) {
     return (
@@ -71,6 +83,7 @@ export default function Home() {
               activeCategory={activeCategory}
               onCategoryChange={setActiveCategory}
               categoryCounts={categoryCounts}
+              categories={categories}
             />
           </aside>
 

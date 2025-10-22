@@ -1,30 +1,22 @@
 import { MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import type { Category } from "@shared/schema";
 
-export type CategoryType = "all" | "muffler-men" | "worlds-largest" | "unique-finds";
+export type CategoryType = string;
 
 interface CategoryFilterProps {
   activeCategory: CategoryType;
   onCategoryChange: (category: CategoryType) => void;
-  categoryCounts: {
-    all: number;
-    "muffler-men": number;
-    "worlds-largest": number;
-    "unique-finds": number;
-  };
+  categoryCounts: Record<string, number>;
+  categories?: Category[];
 }
-
-const categories = [
-  { id: "muffler-men", label: "Muffler Men", icon: "🗿" },
-  { id: "worlds-largest", label: "World's Largest", icon: "🏆" },
-  { id: "unique-finds", label: "Unique Finds", icon: "✨" },
-] as const;
 
 export function CategoryFilter({
   activeCategory,
   onCategoryChange,
   categoryCounts,
+  categories = [],
 }: CategoryFilterProps) {
   return (
     <div className="flex flex-col h-full">
@@ -45,22 +37,22 @@ export function CategoryFilter({
           <MapPin className="h-4 w-4 mr-2" />
           All Locations
           <Badge variant="secondary" className="ml-auto">
-            {categoryCounts.all}
+            {categoryCounts.all ?? 0}
           </Badge>
         </Button>
 
         {categories.map((category) => (
           <Button
-            key={category.id}
-            variant={activeCategory === category.id ? "default" : "ghost"}
+            key={category.slug}
+            variant={activeCategory === category.slug ? "default" : "ghost"}
             className="w-full justify-start"
-            onClick={() => onCategoryChange(category.id as CategoryType)}
-            data-testid={`button-category-${category.id}`}
+            onClick={() => onCategoryChange(category.slug)}
+            data-testid={`button-category-${category.slug}`}
           >
             <span className="mr-2 text-base">{category.icon}</span>
-            {category.label}
+            {category.name}
             <Badge variant="secondary" className="ml-auto">
-              {categoryCounts[category.id]}
+              {categoryCounts[category.slug] ?? 0}
             </Badge>
           </Button>
         ))}

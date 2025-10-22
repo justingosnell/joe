@@ -13,13 +13,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PhotoPanel } from "@/components/PhotoPanel";
+import { useCategoryColors } from "@/hooks/useCategoryColors";
 import type { Location } from "@shared/schema";
-
-const categoryColors: Record<string, string> = {
-  "muffler-men": "#f97316",
-  "worlds-largest": "#eab308",
-  "unique-finds": "#10b981",
-};
 
 const mapLayers = [
   {
@@ -97,17 +92,17 @@ const STATE_NAMES: Record<string, string> = {
   WY: "Wyoming",
 };
 
-function createCustomIcon(category: string, isSelected: boolean) {
-  let color = categoryColors[category] || "#3b82f6";
+function createCustomIcon(category: string, isSelected: boolean, color: string) {
+  let markerColor = color;
 
   if (isSelected) {
-    color = "#a855f7";
+    markerColor = "#a855f7";
   }
 
   const svgIcon = `
     <svg width="32" height="42" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
       <path d="M16 0C9.373 0 4 5.373 4 12c0 9 12 28 12 28s12-19 12-28c0-6.627-5.373-12-12-12z" 
-            fill="${color}" 
+            fill="${markerColor}" 
             stroke="white" 
             stroke-width="2"/>
       <circle cx="16" cy="12" r="5" fill="white"/>
@@ -166,6 +161,7 @@ function InteractiveMap({
   mapLayerId,
 }: MapProps) {
   const currentLayer = mapLayers.find((l) => l.id === mapLayerId) || mapLayers[0];
+  const { getColorBySlug } = useCategoryColors();
 
   return (
     <MapContainer
@@ -187,7 +183,8 @@ function InteractiveMap({
           position={[location.latitude, location.longitude] as [number, number]}
           icon={createCustomIcon(
             location.category,
-            selectedLocation?.id === location.id
+            selectedLocation?.id === location.id,
+            getColorBySlug(location.category)
           )}
           eventHandlers={{
             click: () => {
@@ -226,6 +223,8 @@ export function HomeMapSection() {
       return response.json();
     },
   });
+
+  const { categories: apiCategories = [] } = useCategoryColors();
 
   console.log("HomeMapSection - Loading:", isLoading, "Error:", error, "Locations:", locations.length);
 
@@ -272,11 +271,9 @@ export function HomeMapSection() {
   const categories = useMemo(
     () => [
       { id: "all", label: "All Categories" },
-      { id: "muffler-men", label: "Muffler Men" },
-      { id: "worlds-largest", label: "World's Largest" },
-      { id: "unique-finds", label: "Unique Finds" },
+      ...apiCategories.map((cat) => ({ id: cat.slug, label: cat.name })),
     ],
-    []
+    [apiCategories]
   );
 
   if (isExpanded) {

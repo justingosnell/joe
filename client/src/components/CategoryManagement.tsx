@@ -197,9 +197,12 @@ export function CategoryManagement() {
                     </div>
                     <div>
                       <CardTitle className="text-lg">{category.name}</CardTitle>
-                      <Badge variant="secondary" className="mt-1 text-xs">
+                      <span
+                        className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold mt-1 text-white ribbon-badge"
+                        style={{ backgroundColor: category.color, borderColor: category.color }}
+                      >
                         {category.slug}
-                      </Badge>
+                      </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
@@ -228,18 +231,9 @@ export function CategoryManagement() {
                     {category.description}
                   </p>
                 )}
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-4 h-4 rounded border"
-                      style={{ backgroundColor: category.color }}
-                    />
-                    <span className="font-mono">{category.color}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <GripVertical className="h-3 w-3" />
-                    <span>Order: {category.displayOrder}</span>
-                  </div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <GripVertical className="h-3 w-3" />
+                  <span>Order: {category.displayOrder}</span>
                 </div>
               </CardContent>
             </Card>

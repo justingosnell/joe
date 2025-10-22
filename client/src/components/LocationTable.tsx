@@ -1,6 +1,7 @@
 import { Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { RibbonBadge } from "@/components/RibbonBadge";
+import { useCategoryColors } from "@/hooks/useCategoryColors";
 import {
   Table,
   TableBody,
@@ -18,25 +19,22 @@ interface LocationTableProps {
   onLocationClick: (location: Location) => void;
 }
 
-const getCategoryLabel = (category: string) => {
-  const labels: Record<string, string> = {
-    "muffler-men": "Muffler Men",
-    "worlds-largest": "World's Largest",
-    "unique-finds": "Unique Finds",
-  };
-  return labels[category] || category;
-};
-
-const getCategoryColor = (category: string) => {
-  const colors: Record<string, string> = {
-    "muffler-men": "bg-orange-500 text-white",
-    "worlds-largest": "bg-yellow-500 text-white",
-    "unique-finds": "bg-green-500 text-white",
-  };
-  return colors[category] || "bg-primary text-primary-foreground";
-};
-
 export function LocationTable({ locations, onEdit, onDelete, onLocationClick }: LocationTableProps) {
+  const { categories } = useCategoryColors();
+
+  // Create a map of category slug to category object for quick lookup
+  const categoryMap = categories.reduce((map, cat) => {
+    map[cat.slug] = cat;
+    return map;
+  }, {} as Record<string, typeof categories[0]>);
+
+  const getCategoryLabel = (slug: string) => {
+    return categoryMap[slug]?.name || slug;
+  };
+
+  const getCategoryColor = (slug: string) => {
+    return categoryMap[slug]?.color || "#f97316";
+  };
 
   if (locations.length === 0) {
     return (
@@ -83,17 +81,17 @@ export function LocationTable({ locations, onEdit, onDelete, onLocationClick }: 
                     </button>
                     {/* Show category and state on mobile */}
                     <div className="sm:hidden text-xs text-muted-foreground mt-1">
-                      <Badge className={`text-xs mr-1 ${getCategoryColor(location.category)}`}>
+                      <RibbonBadge backgroundColor={getCategoryColor(location.category)}>
                         {getCategoryLabel(location.category)}
-                      </Badge>
+                      </RibbonBadge>
                       {location.city ? `${location.city}, ${location.state}` : location.state}
                     </div>
                   </div>
                 </TableCell>
                 <TableCell className="hidden sm:table-cell">
-                  <Badge className={getCategoryColor(location.category)}>
+                  <RibbonBadge backgroundColor={getCategoryColor(location.category)}>
                     {getCategoryLabel(location.category)}
-                  </Badge>
+                  </RibbonBadge>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   <div>

@@ -340,3 +340,54 @@
   font-weight: 400;
   font-style: normal;
 }
+
+/* Ribbon Badge Styles - Custom Implementation */
+.ribbon-badge-custom {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 28px;
+  background-color: #f97316;
+  color: white;
+  font-weight: 600;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  /* Create V-notch at bottom */
+  clip-path: polygon(
+    0% 0%,
+    100% 0%,
+    100% 70%,
+    51% 100%,
+    49% 100%,
+    0% 70%
+  );
+}
+
+/* Left triangle tail */
+.ribbon-badge-custom::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 12px 12px 12px 0;
+  border-color: transparent #f97316 transparent transparent;
+}
+
+/* Right triangle tail */
+.ribbon-badge-custom::after {
+  content: '';
+  position: absolute;
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 12px 0 12px 12px;
+  border-color: transparent transparent transparent #f97316;
+}

@@ -1,5 +1,6 @@
 import { Calendar, MapPin, Tag, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useCategoryColors } from "@/hooks/useCategoryColors";
 import {
   Dialog,
   DialogContent,
@@ -14,16 +15,20 @@ interface PhotoPanelProps {
 }
 
 export function PhotoPanel({ location, onClose }: PhotoPanelProps) {
-  const getCategoryLabel = (category: string) => {
-    if (category === "muffler-men") return "Muffler Men";
-    if (category === "worlds-largest") return "World's Largest";
-    return category;
+  const { categories } = useCategoryColors();
+
+  // Create a map of category slug to category object for quick lookup
+  const categoryMap = categories.reduce((map, cat) => {
+    map[cat.slug] = cat;
+    return map;
+  }, {} as Record<string, typeof categories[0]>);
+
+  const getCategoryLabel = (slug: string) => {
+    return categoryMap[slug]?.name || slug;
   };
 
-  const getCategoryColor = (category: string) => {
-    if (category === "muffler-men") return "bg-pin-muffler text-white";
-    if (category === "worlds-largest") return "bg-pin-worlds-largest text-white";
-    return "bg-primary text-primary-foreground";
+  const getCategoryColor = (slug: string) => {
+    return categoryMap[slug]?.color || "#f97316";
   };
 
   const getCustomFields = (location: Location): Record<string, string> => {
@@ -48,7 +53,10 @@ export function PhotoPanel({ location, onClose }: PhotoPanelProps) {
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               <div className="absolute bottom-4 left-4 right-4">
-                <Badge className={`${getCategoryColor(location.category)} mb-2`}>
+                <Badge 
+                  className="mb-2 text-white"
+                  style={{ backgroundColor: getCategoryColor(location.category) }}
+                >
                   <Tag className="h-3 w-3 mr-1" />
                   {getCategoryLabel(location.category)}
                 </Badge>

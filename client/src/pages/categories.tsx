@@ -229,12 +229,14 @@ export default function Categories() {
                         <CardTitle className="text-xl text-amber-900">
                           {category.name}
                         </CardTitle>
-                        <Badge
-                          variant="secondary"
-                          className="mt-1 bg-amber-100 text-amber-700 text-xs"
+                        <span
+                          className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold mt-1 text-white"
+                          style={{
+                            backgroundColor: category.color,
+                          }}
                         >
                           {category.slug}
-                        </Badge>
+                        </span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -249,15 +251,6 @@ export default function Categories() {
                   <CardDescription className="text-amber-700 mb-4 min-h-[3rem]">
                     {category.description || "No description"}
                   </CardDescription>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div
-                      className="w-8 h-8 rounded border-2 border-amber-200"
-                      style={{ backgroundColor: category.color }}
-                    />
-                    <span className="text-sm text-amber-600 font-mono">
-                      {category.color}
-                    </span>
-                  </div>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
