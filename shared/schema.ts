@@ -1,9 +1,9 @@
 import { sql } from "drizzle-orm";
-import { sqliteTable, text, real } from "drizzle-orm/sqlite-core";
+import { pgTable, text, doublePrecision } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = sqliteTable("users", {
+export const users = pgTable("users", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
@@ -17,11 +17,11 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
-export const locations = sqliteTable("locations", {
+export const locations = pgTable("locations", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
-  latitude: real("latitude").default(0),
-  longitude: real("longitude").default(0),
+  latitude: doublePrecision("latitude").default(0),
+  longitude: doublePrecision("longitude").default(0),
   category: text("category").notNull(),
   state: text("state").notNull(),
   city: text("city").default(""),
@@ -45,7 +45,7 @@ export type InsertLocation = z.infer<typeof insertLocationSchema>;
 export type Location = typeof locations.$inferSelect;
 
 // Media Library Schema
-export const media = sqliteTable("media", {
+export const media = pgTable("media", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   filename: text("filename").notNull(),
   originalName: text("original_name").notNull(),
@@ -69,7 +69,7 @@ export type InsertMedia = z.infer<typeof insertMediaSchema>;
 export type Media = typeof media.$inferSelect;
 
 // Settings Schema
-export const settings = sqliteTable("settings", {
+export const settings = pgTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -84,14 +84,14 @@ export type InsertSetting = z.infer<typeof insertSettingSchema>;
 export type Setting = typeof settings.$inferSelect;
 
 // Categories Schema
-export const categories = sqliteTable("categories", {
+export const categories = pgTable("categories", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   description: text("description").default(""),
   icon: text("icon").default("📍"),
   color: text("color").default("#f97316"), // Default orange color
-  displayOrder: real("display_order").default(0),
+  displayOrder: doublePrecision("display_order").default(0),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
