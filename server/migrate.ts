@@ -1,13 +1,22 @@
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { db, sqlite } from "./db";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const migrationsFolder = path.resolve(__dirname, "..", "migrations");
 
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL environment variable is not set");
+}
+
+const sql = postgres(databaseUrl, { max: 1 });
+const db = drizzle(sql);
+
 console.log("Running migrations...");
-migrate(db, { migrationsFolder });
+await migrate(db, { migrationsFolder });
 console.log("✓ Migrations completed successfully");
 
-sqlite.close();
+await sql.end();

@@ -29,33 +29,42 @@ async function importData() {
 
     console.log("🔗 Connected to PostgreSQL");
 
+    // Clear existing data (delete in reverse order of dependencies)
+    console.log("🗑️  Clearing existing data...");
+    await db.delete(schema.media);
+    await db.delete(schema.locations);
+    await db.delete(schema.categories);
+    await db.delete(schema.settings);
+    await db.delete(schema.users);
+    console.log("✅ Cleared existing data");
+
     // Import categories first (no dependencies)
     if (data.categories?.length > 0) {
-      await db.insert(schema.categories).values(data.categories).onConflictDoNothing();
+      await db.insert(schema.categories).values(data.categories);
       console.log(`✅ Imported ${data.categories.length} categories`);
     }
 
     // Import users (referenced by other tables)
     if (data.users?.length > 0) {
-      await db.insert(schema.users).values(data.users).onConflictDoNothing();
+      await db.insert(schema.users).values(data.users);
       console.log(`✅ Imported ${data.users.length} users`);
     }
 
     // Import locations
     if (data.locations?.length > 0) {
-      await db.insert(schema.locations).values(data.locations).onConflictDoNothing();
+      await db.insert(schema.locations).values(data.locations);
       console.log(`✅ Imported ${data.locations.length} locations`);
     }
 
     // Import media
     if (data.media?.length > 0) {
-      await db.insert(schema.media).values(data.media).onConflictDoNothing();
+      await db.insert(schema.media).values(data.media);
       console.log(`✅ Imported ${data.media.length} media files`);
     }
 
     // Import settings
     if (data.settings?.length > 0) {
-      await db.insert(schema.settings).values(data.settings).onConflictDoNothing();
+      await db.insert(schema.settings).values(data.settings);
       console.log(`✅ Imported ${data.settings.length} settings`);
     }
 

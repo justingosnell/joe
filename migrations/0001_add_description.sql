@@ -1,1 +1,1 @@
-ALTER TABLE `locations` ADD COLUMN `description` text DEFAULT '';
+-- Description column already included in initial migration
