@@ -5,6 +5,7 @@ services:
     plan: starter
     buildCommand: npm install && npm run build
     startCommand: npx tsx server/migrate.ts && npm run merge-data && npm start
+    # Force rebuild - cache issue fix
     envVars:
       - key: NODE_ENV
         value: production
