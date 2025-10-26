@@ -25,7 +25,7 @@ async function mergeData() {
 
     // Connect to PostgreSQL with SSL
     const client = postgres(databaseUrl, {
-      ssl: "require",
+      ssl: { rejectUnauthorized: false },
       max: 1,
     });
     const db = drizzle(client, { schema });
@@ -53,8 +53,14 @@ async function mergeData() {
 
     // Import missing locations
     if (missingLocations.length > 0) {
-      await db.insert(schema.locations).values(missingLocations);
-      console.log(`✅ Imported ${missingLocations.length} missing locations`);
+      console.log(`📤 Importing ${missingLocations.length} missing locations...`);
+      try {
+        await db.insert(schema.locations).values(missingLocations);
+        console.log(`✅ Successfully imported ${missingLocations.length} missing locations`);
+      } catch (insertError) {
+        console.error("❌ Error inserting locations:", insertError);
+        throw insertError;
+      }
     }
 
     // Import media for the new locations (if any)
@@ -65,13 +71,23 @@ async function mergeData() {
       );
       
       if (newMedia.length > 0) {
-        await db.insert(schema.media).values(newMedia);
-        console.log(`✅ Imported ${newMedia.length} media files for new locations`);
+        console.log(`📤 Importing ${newMedia.length} media files for new locations...`);
+        try {
+          await db.insert(schema.media).values(newMedia);
+          console.log(`✅ Imported ${newMedia.length} media files for new locations`);
+        } catch (mediaError) {
+          console.error("❌ Error inserting media:", mediaError);
+          throw mediaError;
+        }
       }
     }
 
+    // Verify import by checking final count
+    const finalLocations = await db.select().from(schema.locations);
     console.log("\n✅ Data merge completed successfully!");
-    console.log(`   Total locations now: ${currentLocations.length + missingLocations.length}`);
+    console.log(`   Initial locations: ${currentLocations.length}`);
+    console.log(`   Locations imported: ${missingLocations.length}`);
+    console.log(`   Total locations now: ${finalLocations.length}`);
 
     await client.end();
   } catch (error) {
