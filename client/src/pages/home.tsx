@@ -92,17 +92,17 @@ export default function Home() {
           {/* Stats */}
           <div className="flex justify-center gap-8 mb-8">
             <div className="text-center">
-              <div className="text-3xl font-bold text-orange-600">{locations.length}</div>
+              <div className="text-3xl font-bold text-orange-300">{locations.length}</div>
               <div className="text-sm text-amber-700">Attractions</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-orange-600">
+              <div className="text-3xl font-bold text-orange-300">
                 {new Set(locations.map(l => l.state)).size}
               </div>
               <div className="text-sm text-amber-700">States</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-orange-600">
+              <div className="text-3xl font-bold text-orange-300">
                 {locations.filter(l => l.photoUrl).length}
               </div>
               <div className="text-sm text-amber-700">Photos</div>
@@ -119,30 +119,30 @@ export default function Home() {
 
         {/* Category Collections */}
         <section className="mb-12">
-          <h2 className="text-3xl font-bold mb-6 text-amber-900">Quirky Collections</h2>
+          <h2 className="text-3xl font-bold mb-6 text-slate-900">Quirky Collections</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {categoryCollections.map((collection) => (
               <Card
                 key={collection.category}
-                className="border-2 border-amber-200 hover:border-orange-400 transition-all hover:shadow-xl cursor-pointer group bg-white/80 backdrop-blur"
+                className="border-0 shadow-2xl cursor-pointer group bg-blue-50 rounded-lg overflow-hidden"
               >
-                <CardHeader>
+                <CardHeader className="bg-blue-50">
+                </CardHeader>
+                <CardContent className="pt-6 bg-blue-50">
                   <div className="text-5xl mb-3 group-hover:scale-110 transition-transform">
                     {collection.icon}
                   </div>
-                  <CardTitle className="text-xl text-amber-900">
+                  <CardTitle className="text-xl text-slate-900">
                     {collection.title}
                   </CardTitle>
-                  <CardDescription className="text-amber-700">
+                  <CardDescription className="text-slate-600">
                     {collection.description}
                   </CardDescription>
-                </CardHeader>
-                <CardContent>
                   <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-orange-600">
+                    <span className="text-2xl font-bold text-slate-700">
                       {collection.count}
                     </span>
-                    <Button variant="outline" className="border-orange-300 text-orange-700 hover:bg-orange-50">
+                    <Button className="border-2 border-white text-white bg-transparent hover:bg-white/20">
                       Explore →
                     </Button>
                   </div>

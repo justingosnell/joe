@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { MapIcon, LogIn, User, LogOut, KeyRound } from "lucide-react";
-import { ThemeToggle } from "./ThemeToggle";
 import { LoginModal } from "./LoginModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -112,7 +111,6 @@ export function AppHeader() {
                 Login
               </Button>
             )}
-            <ThemeToggle />
           </div>
         </div>
       </header>

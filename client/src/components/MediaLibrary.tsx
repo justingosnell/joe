@@ -74,6 +74,9 @@ export function MediaLibrary({ open, onOpenChange, onSelect, mode = "select" }: 
 
       return response.json();
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["media"] });
+    },
   });
 
   // Update mutation
@@ -176,7 +179,13 @@ export function MediaLibrary({ open, onOpenChange, onSelect, mode = "select" }: 
         successCount++;
       } catch (error) {
         failCount++;
+        const errorMsg = error instanceof Error ? error.message : "Unknown error";
         console.error(`Failed to upload ${validFiles[i].name}:`, error);
+        toast({
+          title: "Upload failed",
+          description: `${validFiles[i].name}: ${errorMsg}`,
+          variant: "destructive",
+        });
       }
     }
     

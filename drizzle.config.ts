@@ -1,10 +1,18 @@
 import { defineConfig } from "drizzle-kit";
 
+const databaseUrl = process.env.DATABASE_URL || "postgresql://localhost/joe";
+const isRemoteDb = databaseUrl.includes("render.com") || databaseUrl.includes("neon.tech");
+
 export default defineConfig({
   out: "./migrations",
   schema: "./shared/schema.ts",
   dialect: "postgresql",
-  dbCredentials: {
-    url: process.env.DATABASE_URL || "postgresql://localhost/joe",
-  },
+  dbCredentials: isRemoteDb
+    ? {
+        url: databaseUrl,
+        ssl: "require",
+      }
+    : {
+        url: databaseUrl,
+      },
 });

@@ -264,14 +264,16 @@ export function HomeMapSection() {
   }, [locations, category, state]);
 
   const states = useMemo(
-    () => Array.from(new Set(locations.map((l) => l.state))).sort(),
+    () => Array.from(new Set(locations.map((l) => l.state).filter(Boolean))).sort(),
     [locations]
   );
 
   const categories = useMemo(
     () => [
       { id: "all", label: "All Categories" },
-      ...apiCategories.map((cat) => ({ id: cat.slug, label: cat.name })),
+      ...apiCategories
+        .filter((cat) => cat.slug) // Filter out categories with empty slugs
+        .map((cat) => ({ id: cat.slug, label: cat.name })),
     ],
     [apiCategories]
   );

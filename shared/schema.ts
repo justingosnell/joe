@@ -56,6 +56,8 @@ export const media = pgTable("media", {
   height: text("height"),
   alt: text("alt").default(""),
   caption: text("caption").default(""),
+  data: text("data"), // Legacy base64 data, to be phased out
+  storagePath: text("storage_path"),
   uploadedAt: text("uploaded_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   uploadedBy: text("uploaded_by").references(() => users.id),
 });
@@ -63,6 +65,9 @@ export const media = pgTable("media", {
 export const insertMediaSchema = createInsertSchema(media).omit({
   id: true,
   uploadedAt: true,
+}).extend({
+  data: z.string().optional(),
+  storagePath: z.string().min(1),
 });
 
 export type InsertMedia = z.infer<typeof insertMediaSchema>;

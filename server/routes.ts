@@ -3,12 +3,16 @@ import { createServer, type Server } from "http";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { storage, ensureStorageReady } from "./storage";
+import { runMigrations } from "./db";
 import bcrypt from "bcrypt";
 import { insertLocationSchema } from "@shared/schema";
 import { z } from "zod";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
 import { fileURLToPath } from "url";
+import { Readable } from "stream";
+import { storageBucket } from "./firebase";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,15 +46,8 @@ async function initMulter() {
   const multerModule = await import("multer");
   const multer = multerModule.default;
   
-  const storageConfig = multer.diskStorage({
-    destination: (req: any, file: any, cb: any) => {
-      cb(null, uploadsDir);
-    },
-    filename: (req: any, file: any, cb: any) => {
-      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + path.extname(file.originalname));
-    },
-  });
+  // Use memory storage to store file in buffer instead of disk
+  const storageConfig = multer.memoryStorage();
 
   upload = multer({
     storage: storageConfig,
@@ -71,18 +68,21 @@ async function initMulter() {
   });
 }
 
+// Helper function to compute file hash for deduplication from buffer
+function computeFileHash(buffer: Buffer): string {
+  return crypto.createHash("sha256").update(buffer).digest("hex");
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Run migrations first to ensure database schema is up to date
+  await runMigrations();
+  
   // Ensure storage is initialized before setting up routes
   await ensureStorageReady();
   
   // Initialize multer
   await initMulter();
   // Serve uploaded files statically
-  app.use("/uploads", (req, res, next) => {
-    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-    next();
-  });
-  app.use("/uploads", express.static(uploadsDir));
 
   // Session configuration
   app.use(
@@ -231,56 +231,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Upload image to media library
-  app.post("/api/media", requireAuth, upload.single("image"), async (req: Request, res: Response) => {
+  // Serve image from database by ID (public endpoint)
+  app.get("/api/image/:id", async (req: Request, res: Response) => {
     try {
-      console.log("📤 Media upload request received");
-      console.log("File:", req.file);
-      console.log("Session userId:", req.session.userId);
-      
-      if (!req.file) {
-        console.log("❌ No file in request");
-        return res.status(400).json({ message: "No file uploaded" });
+      const mediaItem = await storage.getMedia(req.params.id);
+      if (!mediaItem) {
+        return res.status(404).json({ message: "Image not found" });
       }
 
-      const fileUrl = `/uploads/${req.file.filename}`;
-      
-      // Get image dimensions if it's an image
-      let width: string | undefined;
-      let height: string | undefined;
-      
-      if (req.file.mimetype.startsWith('image/')) {
-        try {
-          const sizeOf = (await import('image-size')).default;
-          const dimensions = sizeOf(req.file.path);
-          width = dimensions.width?.toString();
-          height = dimensions.height?.toString();
-          console.log("📐 Image dimensions:", width, "x", height);
-        } catch (e) {
-          // If image-size fails, continue without dimensions
-          console.warn("Could not get image dimensions:", e);
+      if (mediaItem.url) {
+        return res.redirect(mediaItem.url);
+      }
+
+      if (mediaItem.data?.startsWith("data:")) {
+        const parts = mediaItem.data.split(";base64,");
+        if (parts.length === 2) {
+          const mimeType = parts[0].replace("data:", "");
+          const base64Data = parts[1];
+          res.setHeader("Content-Type", mimeType);
+          res.setHeader("Cache-Control", "public, max-age=31536000");
+          res.send(Buffer.from(base64Data, "base64"));
+          return;
         }
       }
 
-      // Save to media library
-      const mediaItem = await storage.createMedia({
-        filename: req.file.filename,
-        originalName: req.file.originalname,
-        url: fileUrl,
-        mimeType: req.file.mimetype,
-        size: req.file.size.toString(),
-        width,
-        height,
-        alt: "",
-        caption: "",
-        uploadedBy: req.session.userId,
+      res.status(404).json({ message: "Image not found" });
+    } catch (error) {
+      console.error("Get image error:", error);
+      res.status(500).json({ message: "Failed to fetch image" });
+    }
+  });
+
+  // Wrapper to handle multer errors
+  const uploadMiddleware = (req: Request, res: Response, next: Function) => {
+    upload.single("image")(req, res, (err: any) => {
+      if (err) {
+        console.error("❌ Multer error:", err);
+        return res.status(400).json({ message: err.message || "File upload failed" });
+      }
+      next();
+    });
+  };
+
+  // Upload image to media library
+  app.post("/api/media", requireAuth, uploadMiddleware, async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const fileHash = computeFileHash(req.file.buffer);
+      const storagePath = `media/${fileHash}-${Date.now()}-${req.file.originalname}`;
+
+      const fileRef = storageBucket.file(storagePath);
+      const downloadToken = crypto.randomUUID();
+
+      await fileRef.save(req.file.buffer, {
+        contentType: req.file.mimetype,
+        resumable: false,
+        metadata: {
+          firebaseStorageDownloadTokens: downloadToken,
+        },
       });
 
-      console.log("✅ Media item created:", mediaItem.id);
+      const [metadata] = await fileRef.getMetadata();
+
+      const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${storageBucket.name}/o/${encodeURIComponent(storagePath)}?alt=media&token=${downloadToken}`;
+
+      const mediaItem = await storage.createMedia({
+        filename: req.file.originalname,
+        originalName: req.file.originalname,
+        url: publicUrl,
+        mimeType: req.file.mimetype,
+        size: metadata.size ?? req.file.size.toString(),
+        width: metadata.metadata?.width,
+        height: metadata.metadata?.height,
+        alt: "",
+        caption: "",
+        data: null,
+        uploadedBy: req.session.userId,
+        storagePath,
+      });
+
       res.status(201).json(mediaItem);
     } catch (error) {
-      console.error("❌ Upload error:", error);
-      res.status(500).json({ message: "Failed to upload file" });
+      const errorMsg = error instanceof Error ? error.message : "Failed to upload file";
+      res.status(500).json({ message: errorMsg });
     }
   });
 
@@ -314,13 +350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Media not found" });
       }
 
-      // Delete file from disk
-      const filePath = path.join(uploadsDir, mediaItem.filename);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-
-      // Delete from database
+      // Delete from database (images now stored as base64 in DB, no disk files)
       const success = await storage.deleteMedia(req.params.id);
       if (!success) {
         return res.status(404).json({ message: "Media not found" });
@@ -334,22 +364,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Legacy upload endpoint (for backward compatibility)
-  app.post("/api/upload", requireAuth, upload.single("image"), async (req: Request, res: Response) => {
+  // Now stores images in database like the new /api/media endpoint
+  app.post("/api/upload", requireAuth, uploadMiddleware, async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const fileUrl = `/uploads/${req.file.filename}`;
-      res.json({ 
-        url: fileUrl,
-        filename: req.file.filename,
+      const fileHash = computeFileHash(req.file.buffer);
+      const storagePath = `media/${fileHash}-${Date.now()}-${req.file.originalname}`;
+
+      const fileRef = storageBucket.file(storagePath);
+      const downloadToken = crypto.randomUUID();
+
+      await fileRef.save(req.file.buffer, {
+        contentType: req.file.mimetype,
+        resumable: false,
+        metadata: {
+          firebaseStorageDownloadTokens: downloadToken,
+        },
+      });
+
+      const [metadata] = await fileRef.getMetadata();
+
+      const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${storageBucket.name}/o/${encodeURIComponent(storagePath)}?alt=media&token=${downloadToken}`;
+
+      const mediaItem = await storage.createMedia({
+        filename: req.file.originalname,
         originalName: req.file.originalname,
-        size: req.file.size,
+        url: publicUrl,
+        mimeType: req.file.mimetype,
+        size: metadata.size ?? req.file.size.toString(),
+        width: metadata.metadata?.width,
+        height: metadata.metadata?.height,
+        alt: "",
+        caption: "",
+        data: null,
+        uploadedBy: req.session.userId,
+        storagePath,
+      });
+
+      res.json({ 
+        url: mediaItem.url,
+        filename: mediaItem.filename,
+        originalName: mediaItem.originalName,
+        size: mediaItem.size,
+        id: mediaItem.id,
       });
     } catch (error) {
-      console.error("Upload error:", error);
-      res.status(500).json({ message: "Failed to upload file" });
+      const errorMsg = error instanceof Error ? error.message : "Failed to upload file";
+      res.status(500).json({ message: errorMsg });
+    }
+  });
+
+  // ============ Admin Routes ============
+
+  // Cleanup orphaned media files (admin only)
+  // NOTE: Images are now stored as base64 in the database, so this endpoint is deprecated
+  // Keeping for backward compatibility - just returns success with no action
+  app.post("/api/admin/cleanup-media", requireAuth, async (req: Request, res: Response) => {
+    try {
+      console.log("📦 Media cleanup: Images stored in database, no disk cleanup needed");
+      res.json({
+        message: "Images are now stored in database. No disk cleanup needed.",
+        deletedCount: 0,
+        freedMB: "0",
+        deletedFiles: [],
+      });
+    } catch (error) {
+      console.error("❌ Cleanup error:", error);
+      const errorMsg = error instanceof Error ? error.message : "Cleanup failed";
+      res.status(500).json({ message: errorMsg });
     }
   });
 
@@ -464,38 +549,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bulk upload locations from text file
   app.post("/api/locations/bulk-upload", requireAuth, async (req: Request, res: Response) => {
     try {
-      console.log("Bulk upload request received");
+      console.log("🔄 Bulk upload request received from user:", req.session.userId);
       const { content } = req.body;
       
       if (!content || typeof content !== 'string') {
-        console.log("Invalid content:", typeof content);
+        console.log("❌ Invalid content:", typeof content);
         return res.status(400).json({ message: "File content is required" });
       }
       
-      console.log(`Processing ${content.split('\n').length} lines`);
-
       const lines = content.split('\n').filter(line => line.trim());
+      console.log(`📋 Processing ${lines.length} lines`);
+
       const results = {
         success: 0,
         failed: 0,
         errors: [] as string[],
       };
 
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
+      // Helper function to parse CSV line with quoted field support
+      const parseCSVLine = (line: string): string[] => {
+        const parts: string[] = [];
+        let current = '';
+        let inQuotes = false;
+
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          const nextChar = line[i + 1];
+
+          if (char === '"') {
+            if (inQuotes && nextChar === '"') {
+              // Escaped quote
+              current += '"';
+              i++;
+            } else {
+              // Toggle quote mode
+              inQuotes = !inQuotes;
+            }
+          } else if (char === ',' && !inQuotes) {
+            // End of field
+            parts.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        parts.push(current.trim());
+        return parts;
+      };
+
+      // Helper function to validate coordinates
+      const validateCoordinates = (lat: string | number, lon: string | number): boolean => {
+        const latitude = parseFloat(String(lat));
+        const longitude = parseFloat(String(lon));
+        return !isNaN(latitude) && !isNaN(longitude) && 
+               latitude >= -90 && latitude <= 90 && 
+               longitude >= -180 && longitude <= 180;
+      };
+
+      for (let lineNum = 0; lineNum < lines.length; lineNum++) {
+        const line = lines[lineNum].trim();
         if (!line) continue;
 
         try {
-          // Parse CSV line: City, State, Category, Visit Date, Name
-          const parts = line.split(',').map(part => part.trim());
+          // Parse CSV line with quoted field support
+          // Format: City, State, Category, Visit Date, Name, [Latitude, Longitude, Photo URL, Description]
+          const parts = parseCSVLine(line);
           
           if (parts.length < 5) {
             results.failed++;
-            results.errors.push(`Line ${i + 1}: Invalid format - expected 5 fields, got ${parts.length}`);
+            results.errors.push(`Line ${lineNum + 1}: Invalid format - expected minimum 5 fields, got ${parts.length}`);
             continue;
           }
 
           const [city, state, categoryRaw, visitDate, name] = parts;
+          const latitude = parts[5] ? parseFloat(parts[5]) : 0;
+          const longitude = parts[6] ? parseFloat(parts[6]) : 0;
+          const photoUrl = parts[7] || '';
+          const description = parts[8] || '';
+
+          // Validate required fields
+          if (!city || !state || !categoryRaw || !visitDate || !name) {
+            results.failed++;
+            results.errors.push(`Line ${lineNum + 1}: Missing required fields (City, State, Category, Date, Name)`);
+            continue;
+          }
 
           // Normalize category: convert to lowercase and replace spaces with hyphens
           const category = categoryRaw
@@ -507,55 +644,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const validCategories = ['muffler-men', 'worlds-largest', 'unique-finds'];
           if (!validCategories.includes(category)) {
             results.failed++;
-            results.errors.push(`Line ${i + 1}: Invalid category "${categoryRaw}" - must be one of: Muffler Men, World's Largest, Unique Finds`);
+            results.errors.push(`Line ${lineNum + 1}: Invalid category "${categoryRaw}" - must be one of: Muffler Men, World's Largest, Unique Finds`);
             continue;
           }
 
-          // Parse date from MM/DD/YYYY format
+          // Parse and validate date from MM/DD/YYYY format
           let taggedDate = '';
           try {
             const dateParts = visitDate.split('/');
             if (dateParts.length === 3) {
               const [month, day, year] = dateParts;
+              const monthNum = parseInt(month);
+              const dayNum = parseInt(day);
+              const yearNum = parseInt(year);
+
+              // Validate date values
+              if (monthNum < 1 || monthNum > 12 || dayNum < 1 || dayNum > 31 || yearNum < 1900 || yearNum > 2100) {
+                throw new Error('Date values out of range');
+              }
+
               // Convert to ISO format YYYY-MM-DD
-              taggedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+              taggedDate = `${yearNum}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
             } else {
-              throw new Error('Invalid date format');
+              throw new Error('Unexpected format');
             }
           } catch (dateError) {
             results.failed++;
-            results.errors.push(`Line ${i + 1}: Invalid date format "${visitDate}" - expected MM/DD/YYYY`);
+            results.errors.push(`Line ${lineNum + 1}: Invalid date format "${visitDate}" - expected MM/DD/YYYY`);
             continue;
           }
 
-          // Create location with default values for required fields
+          // Validate coordinates if provided (not 0,0)
+          if ((latitude !== 0 || longitude !== 0) && !validateCoordinates(latitude, longitude)) {
+            results.failed++;
+            results.errors.push(`Line ${lineNum + 1}: Invalid coordinates (${latitude}, ${longitude}) - Latitude must be -90 to 90, Longitude must be -180 to 180`);
+            continue;
+          }
+
+          // Prepare metadata for migration tracking
+          const customFields = JSON.stringify({
+            _migrated_at: new Date().toISOString(),
+            _migrated_by: req.session.userId,
+            _source: 'bulk_upload',
+          });
+
+          // Create location with validated data
           const locationData = {
-            name,
-            city,
-            state,
+            name: name.substring(0, 255), // Limit name length
+            city: city.substring(0, 100),
+            state: state.substring(0, 10),
             category,
             taggedDate,
-            latitude: 0, // Default - to be updated manually
-            longitude: 0, // Default - to be updated manually
-            photoUrl: '', // Default - to be updated manually
-            photoId: '', // Default - to be updated manually
+            latitude: latitude || 0,
+            longitude: longitude || 0,
+            photoUrl: photoUrl.substring(0, 500), // Allow longer URLs
+            photoId: '', // Will be set separately if needed
             zipCode: '',
-            customFields: '{}',
+            description: description.substring(0, 1000), // Limit description length
+            customFields,
           };
 
           await storage.createLocation(locationData);
           results.success++;
+          console.log(`✅ Line ${lineNum + 1}: Created location "${name}"`);
         } catch (error) {
           results.failed++;
           const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-          results.errors.push(`Line ${i + 1}: ${errorMsg}`);
+          results.errors.push(`Line ${lineNum + 1}: ${errorMsg}`);
+          console.warn(`⚠️ Line ${lineNum + 1} failed:`, errorMsg);
         }
       }
 
+      console.log(`📊 Bulk upload complete: ${results.success} success, ${results.failed} failed`);
       res.json(results);
     } catch (error) {
-      console.error("Bulk upload error:", error);
+      console.error("❌ Bulk upload error:", error);
       res.status(500).json({ message: "Failed to process bulk upload" });
+    }
+  });
+
+  // Bulk export locations
+  app.get("/api/locations/bulk-export", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const locations = await storage.getAllLocations();
+      
+      if (locations.length === 0) {
+        return res.json({ message: "No locations to export" });
+      }
+
+      // Format: City, State, Category, Visit Date (MM/DD/YYYY), Name, Latitude, Longitude, Photo URL, Description
+      const lines: string[] = [];
+      
+      for (const loc of locations) {
+        // Convert ISO date (YYYY-MM-DD) to MM/DD/YYYY format
+        let visitDate = '';
+        try {
+          if (loc.taggedDate) {
+            const [year, month, day] = loc.taggedDate.split('-');
+            visitDate = `${month}/${day}/${year}`;
+          }
+        } catch (e) {
+          visitDate = loc.taggedDate || '';
+        }
+
+        // Escape and quote fields that might contain commas
+        const escapeField = (field: string | null | undefined) => {
+          if (!field) return '""';
+          const str = String(field);
+          if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        };
+
+        const line = [
+          escapeField(loc.city),
+          escapeField(loc.state),
+          escapeField(loc.category),
+          visitDate,
+          escapeField(loc.name),
+          loc.latitude || 0,
+          loc.longitude || 0,
+          escapeField(loc.photoUrl),
+          escapeField(loc.description),
+        ].join(', ');
+
+        lines.push(line);
+      }
+
+      // Add header
+      const header = 'City, State, Category, Visit Date (MM/DD/YYYY), Name, Latitude, Longitude, Photo URL, Description';
+      const content = [header, ...lines].join('\n');
+
+      // Send as file download
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="locations-export.txt"');
+      res.send(content);
+    } catch (error) {
+      console.error("Bulk export error:", error);
+      res.status(500).json({ message: "Failed to export locations" });
     }
   });
 

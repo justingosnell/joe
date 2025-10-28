@@ -14,7 +14,7 @@ if (!databaseUrl) {
 
 const sql = postgres(databaseUrl, { 
   max: 1,
-  ssl: "require" 
+  ssl: { rejectUnauthorized: false },
 });
 const db = drizzle(sql);
 

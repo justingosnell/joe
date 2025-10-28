@@ -70,6 +70,9 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
 
       return response.json();
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["media"] });
+    },
   });
 
   // Update mutation
@@ -172,7 +175,13 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
         successCount++;
       } catch (error) {
         failCount++;
+        const errorMsg = error instanceof Error ? error.message : "Unknown error";
         console.error(`Failed to upload ${validFiles[i].name}:`, error);
+        toast({
+          title: "Upload failed",
+          description: `${validFiles[i].name}: ${errorMsg}`,
+          variant: "destructive",
+        });
       }
     }
     

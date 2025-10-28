@@ -24,7 +24,9 @@ async function importData() {
     console.log("📖 Read export file");
 
     // Connect to PostgreSQL
-    const client = postgres(databaseUrl);
+    const client = postgres(databaseUrl, {
+      ssl: "require",
+    });
     const db = drizzle(client, { schema });
 
     console.log("🔗 Connected to PostgreSQL");
