@@ -12,7 +12,6 @@ import fs from "fs";
 import crypto from "crypto";
 import { fileURLToPath } from "url";
 import { Readable } from "stream";
-import { storageBucket } from "./firebase";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -282,30 +281,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const fileHash = computeFileHash(req.file.buffer);
       const storagePath = `media/${fileHash}-${Date.now()}-${req.file.originalname}`;
-
-      const fileRef = storageBucket.file(storagePath);
-      const downloadToken = crypto.randomUUID();
-
-      await fileRef.save(req.file.buffer, {
-        contentType: req.file.mimetype,
-        resumable: false,
-        metadata: {
-          firebaseStorageDownloadTokens: downloadToken,
-        },
-      });
-
-      const [metadata] = await fileRef.getMetadata();
-
-      const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${storageBucket.name}/o/${encodeURIComponent(storagePath)}?alt=media&token=${downloadToken}`;
+      
+      const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${process.env.SUPABASE_BUCKET}/${storagePath}`;
 
       const mediaItem = await storage.createMedia({
         filename: req.file.originalname,
         originalName: req.file.originalname,
         url: publicUrl,
         mimeType: req.file.mimetype,
-        size: metadata.size ?? req.file.size.toString(),
-        width: metadata.metadata?.width,
-        height: metadata.metadata?.height,
+        size: req.file.size.toString(),
+        width: undefined,
+        height: undefined,
         alt: "",
         caption: "",
         data: null,
@@ -373,30 +359,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const fileHash = computeFileHash(req.file.buffer);
       const storagePath = `media/${fileHash}-${Date.now()}-${req.file.originalname}`;
-
-      const fileRef = storageBucket.file(storagePath);
-      const downloadToken = crypto.randomUUID();
-
-      await fileRef.save(req.file.buffer, {
-        contentType: req.file.mimetype,
-        resumable: false,
-        metadata: {
-          firebaseStorageDownloadTokens: downloadToken,
-        },
-      });
-
-      const [metadata] = await fileRef.getMetadata();
-
-      const publicUrl = `https://firebasestorage.googleapis.com/v0/b/${storageBucket.name}/o/${encodeURIComponent(storagePath)}?alt=media&token=${downloadToken}`;
+      
+      const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${process.env.SUPABASE_BUCKET}/${storagePath}`;
 
       const mediaItem = await storage.createMedia({
         filename: req.file.originalname,
         originalName: req.file.originalname,
         url: publicUrl,
         mimeType: req.file.mimetype,
-        size: metadata.size ?? req.file.size.toString(),
-        width: metadata.metadata?.width,
-        height: metadata.metadata?.height,
+        size: req.file.size.toString(),
+        width: undefined,
+        height: undefined,
         alt: "",
         caption: "",
         data: null,
