@@ -15,23 +15,6 @@ function createLog() {
 }
 
 const log = createLog();
-let setupVite: any, serveStatic: any;
-
-async function loadViteUtils() {
-  if (process.env.BACKEND_ONLY === "true") {
-    serveStatic = () => {}; // no-op for backend-only
-    setupVite = async () => {}; // no-op for backend-only
-    return;
-  }
-  try {
-    const viteModule = await import("./vite");
-    setupVite = viteModule.setupVite;
-    serveStatic = viteModule.serveStatic;
-  } catch {
-    serveStatic = () => {};
-    setupVite = async () => {};
-  }
-}
 
 // Handle uncaught exceptions
 process.on("uncaughtException", (error) => {
@@ -82,8 +65,6 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
-    await loadViteUtils();
-    
     const server = await registerRoutes(app);
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -93,12 +74,12 @@ app.use((req, res, next) => {
       res.status(status).json({ message });
     });
 
-    // importantly only setup vite in development and after
-    // setting up all the other routes so the catch-all route
-    // doesn't interfere with the other routes
-    if (app.get("env") === "development" && setupVite) {
+    // Setup vite in development only, and not in backend-only mode
+    if (app.get("env") === "development" && process.env.BACKEND_ONLY !== "true") {
+      const { setupVite } = await import("./vite");
       await setupVite(app, server);
-    } else if (serveStatic) {
+    } else if (process.env.BACKEND_ONLY !== "true") {
+      const { serveStatic } = await import("./vite");
       serveStatic(app);
     }
 
