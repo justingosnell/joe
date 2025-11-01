@@ -1,16 +1,27 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
 
-// Handle uncaught exceptions
+function createLog() {
+  return (message: string, source = "express") => {
+    const formattedTime = new Date().toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+    console.log(`${formattedTime} [${source}] ${message}`);
+  };
+}
+
+const log = createLog();
+
 process.on("uncaughtException", (error) => {
   log(`❌ Uncaught Exception: ${error instanceof Error ? error.message : String(error)}`);
   console.error(error);
   process.exit(1);
 });
 
-// Handle unhandled promise rejections
 process.on("unhandledRejection", (reason, promise) => {
   log(`❌ Unhandled Rejection at ${promise}: ${reason instanceof Error ? reason.message : String(reason)}`);
   console.error(reason);
@@ -61,19 +72,6 @@ app.use((req, res, next) => {
       res.status(status).json({ message });
     });
 
-    // importantly only setup vite in development and after
-    // setting up all the other routes so the catch-all route
-    // doesn't interfere with the other routes
-    if (app.get("env") === "development") {
-      await setupVite(app, server);
-    } else {
-      serveStatic(app);
-    }
-
-    // ALWAYS serve the app on the port specified in the environment variable PORT
-    // Other ports are firewalled. Default to 3000 if not specified.
-    // this serves both the API and the client.
-    // It is the only port that is not firewalled.
     const port = parseInt(process.env.PORT || '3000', 10);
     
     server.on('error', (err) => {
