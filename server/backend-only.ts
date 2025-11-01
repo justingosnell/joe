@@ -35,7 +35,8 @@ app.use((req, res, next) => {
     'https://joebosse-app.web.app',
     'https://joebosse-app.firebaseapp.com',
     'http://localhost:5173',
-    'http://localhost:3000'
+    'http://localhost:3000',
+    'https://joeyb.onrender.com'
   ];
   
   if (allowedOrigins.includes(origin || '')) {
