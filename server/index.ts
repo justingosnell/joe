@@ -1,7 +1,31 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+
+function createLog() {
+  return (message: string, source = "express") => {
+    const formattedTime = new Date().toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+    console.log(`${formattedTime} [${source}] ${message}`);
+  };
+}
+
+const log = createLog();
+let setupVite: any, serveStatic: any;
+
+async function loadViteUtils() {
+  if (process.env.BACKEND_ONLY === "true") {
+    serveStatic = () => {}; // no-op for backend-only
+    return;
+  }
+  const viteModule = await import("./vite");
+  setupVite = viteModule.setupVite;
+  serveStatic = viteModule.serveStatic;
+}
 
 // Handle uncaught exceptions
 process.on("uncaughtException", (error) => {
@@ -52,6 +76,8 @@ app.use((req, res, next) => {
 
 (async () => {
   try {
+    await loadViteUtils();
+    
     const server = await registerRoutes(app);
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -64,9 +90,9 @@ app.use((req, res, next) => {
     // importantly only setup vite in development and after
     // setting up all the other routes so the catch-all route
     // doesn't interfere with the other routes
-    if (app.get("env") === "development") {
+    if (app.get("env") === "development" && setupVite) {
       await setupVite(app, server);
-    } else {
+    } else if (serveStatic) {
       serveStatic(app);
     }
 
