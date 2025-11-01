@@ -75,12 +75,15 @@ app.use((req, res, next) => {
     });
 
     // Setup vite in development only, and not in backend-only mode
-    if (app.get("env") === "development" && process.env.BACKEND_ONLY !== "true") {
-      const { setupVite } = await import("./vite");
-      await setupVite(app, server);
-    } else if (process.env.BACKEND_ONLY !== "true") {
-      const { serveStatic } = await import("./vite");
-      serveStatic(app);
+    if (process.env.BACKEND_ONLY !== "true") {
+      const vitePath = [".", "vite"].join("/");
+      const viteModule = await import(vitePath);
+      
+      if (app.get("env") === "development") {
+        await viteModule.setupVite(app, server);
+      } else {
+        viteModule.serveStatic(app);
+      }
     }
 
     // ALWAYS serve the app on the port specified in the environment variable PORT
