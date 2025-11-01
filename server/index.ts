@@ -20,11 +20,17 @@ let setupVite: any, serveStatic: any;
 async function loadViteUtils() {
   if (process.env.BACKEND_ONLY === "true") {
     serveStatic = () => {}; // no-op for backend-only
+    setupVite = async () => {}; // no-op for backend-only
     return;
   }
-  const viteModule = await import("./vite");
-  setupVite = viteModule.setupVite;
-  serveStatic = viteModule.serveStatic;
+  try {
+    const viteModule = await import("./vite");
+    setupVite = viteModule.setupVite;
+    serveStatic = viteModule.serveStatic;
+  } catch {
+    serveStatic = () => {};
+    setupVite = async () => {};
+  }
 }
 
 // Handle uncaught exceptions
