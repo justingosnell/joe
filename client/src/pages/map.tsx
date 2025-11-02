@@ -5,6 +5,7 @@ import { CategoryFilter, type CategoryType } from "@/components/CategoryFilter";
 import { StateFilter } from "@/components/StateFilter";
 import { USMap } from "@/components/USMap";
 import { PhotoPanel } from "@/components/PhotoPanel";
+import { getApiUrl } from "@/lib/api";
 import type { Location, Category } from "@shared/schema";
 
 export default function Home() {
@@ -16,7 +17,7 @@ export default function Home() {
   const { data: locations = [], isLoading } = useQuery<Location[]>({
     queryKey: ["locations"],
     queryFn: async () => {
-      const response = await fetch("/api/locations");
+      const response = await fetch(getApiUrl("/api/locations"));
       if (!response.ok) throw new Error("Failed to fetch locations");
       return response.json();
     },
@@ -26,7 +27,7 @@ export default function Home() {
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["categories"],
     queryFn: async () => {
-      const response = await fetch("/api/categories");
+      const response = await fetch(getApiUrl("/api/categories"));
       if (!response.ok) throw new Error("Failed to fetch categories");
       return response.json();
     },

@@ -3,15 +3,23 @@ services:
     name: roadsidemap
     env: node
     plan: starter
-    buildCommand: rm -rf dist && npm install && npx esbuild server/backend-only.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/index.js
+    buildCommand: npm install && npm run build
     startCommand: npx tsx server/migrate.ts && npm run merge-data && npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 3000
-      - key: BACKEND_ONLY
-        value: "true"
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
     nixpacks:
       aptPackages:
         - build-essential

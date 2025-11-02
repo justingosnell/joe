@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, MapPin, Camera, Signpost } from "lucide-react";
 import { MediaSlideshow } from "@/components/MediaSlideshow";
 import { HomeMapSection } from "@/components/HomeMapSection";
+import { getApiUrl } from "@/lib/api";
 import type { Location } from "@shared/schema";
 
 export default function Home() {
@@ -18,7 +19,7 @@ export default function Home() {
   const { data: locations = [], isLoading } = useQuery<Location[]>({
     queryKey: ["locations"],
     queryFn: async () => {
-      const response = await fetch("/api/locations");
+      const response = await fetch(getApiUrl("/api/locations"));
       if (!response.ok) throw new Error("Failed to fetch locations");
       return response.json();
     },

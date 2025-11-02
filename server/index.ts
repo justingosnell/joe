@@ -21,15 +21,14 @@ const app = express();
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   const allowedOrigins = [
-    'https://joebosse-app.web.app',
-    'https://joebosse-app.firebaseapp.com',
     'http://localhost:5173',
     'http://localhost:3000',
-    'https://joeyb.onrender.com'
+    'https://backend-x65t.onrender.com'
   ];
   
-  if (allowedOrigins.includes(origin || '')) {
-    res.header('Access-Control-Allow-Origin', origin);
+  // Allow requests from the same origin (frontend served from same Render instance)
+  if (!origin || allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
   }
   
   res.header('Access-Control-Allow-Credentials', 'true');

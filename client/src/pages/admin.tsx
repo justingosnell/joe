@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { getApiUrl } from "@/lib/api";
 import { LogOut, Plus, MapPin, Search, X, Image as ImageIcon, Upload, FileUp, FolderTree, Home, Download } from "lucide-react";
 import { LocationTable } from "@/components/LocationTable";
 import { LocationDialog } from "@/components/LocationDialog";
@@ -34,7 +35,7 @@ export default function Admin() {
   const { data: allLocations = [], isLoading } = useQuery<Location[]>({
     queryKey: ["locations"],
     queryFn: async () => {
-      const response = await fetch("/api/locations");
+      const response = await fetch(getApiUrl("/api/locations"));
       if (!response.ok) throw new Error("Failed to fetch locations");
       return response.json();
     },
@@ -44,7 +45,7 @@ export default function Admin() {
   const { data: settings } = useQuery<Record<string, string>>({
     queryKey: ["settings"],
     queryFn: async () => {
-      const response = await fetch("/api/settings");
+      const response = await fetch(getApiUrl("/api/settings"));
       if (!response.ok) return {};
       return response.json();
     },
@@ -80,7 +81,7 @@ export default function Admin() {
   // Create location mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertLocation) => {
-      const response = await fetch("/api/locations", {
+      const response = await fetch(getApiUrl("/api/locations"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -158,7 +159,7 @@ export default function Admin() {
 
   const handleBulkExport = async () => {
     try {
-      const response = await fetch("/api/locations/bulk-export", {
+      const response = await fetch(getApiUrl("/api/locations/bulk-export"), {
         credentials: "include",
       });
       

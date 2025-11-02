@@ -10,6 +10,7 @@ import { Upload, X, Search, Image as ImageIcon, Trash2, Edit2, Check } from "luc
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getApiUrl } from "@/lib/api";
 import type { Media } from "@shared/schema";
 
 interface MediaLibraryProps {
@@ -35,7 +36,7 @@ export function MediaLibrary({ open, onOpenChange, onSelect, mode = "select" }: 
   const { data: allMedia = [], isLoading } = useQuery<Media[]>({
     queryKey: ["media"],
     queryFn: async () => {
-      const response = await fetch("/api/media", {
+      const response = await fetch(getApiUrl("/api/media"), {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch media");
@@ -61,7 +62,7 @@ export function MediaLibrary({ open, onOpenChange, onSelect, mode = "select" }: 
       const formData = new FormData();
       formData.append("image", file);
 
-      const response = await fetch("/api/media", {
+      const response = await fetch(getApiUrl("/api/media"), {
         method: "POST",
         body: formData,
         credentials: "include",

@@ -4,11 +4,9 @@ export function getApiBaseUrl(): string {
     return viteApiUrl;
   }
   
-  if (import.meta.env.PROD) {
-    return '';
-  }
-  
-  return 'http://localhost:5173';
+  // Frontend and backend are on same domain (either localhost or Render)
+  // Use relative URLs - no need for baseUrl
+  return '';
 }
 
 export function getApiUrl(endpoint: string): string {

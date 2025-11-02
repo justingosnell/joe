@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getApiUrl } from "@/lib/api";
 
 interface Location {
   id: string;
@@ -21,7 +22,7 @@ export function MediaSlideshow() {
   const { data: images = [] } = useQuery<Location[]>({
     queryKey: ["slideshow-images"],
     queryFn: async () => {
-      const response = await fetch("/api/locations");
+      const response = await fetch(getApiUrl("/api/locations"));
       if (!response.ok) return [];
       const data = await response.json();
       // Filter only locations with images and shuffle them

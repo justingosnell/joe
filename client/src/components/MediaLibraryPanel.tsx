@@ -9,6 +9,7 @@ import { Upload, X, Search, Trash2, Edit2, Check } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getApiUrl } from "@/lib/api";
 import type { Media } from "@shared/schema";
 
 interface MediaLibraryPanelProps {
@@ -32,7 +33,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
   const { data: allMedia = [], isLoading } = useQuery<Media[]>({
     queryKey: ["media"],
     queryFn: async () => {
-      const response = await fetch("/api/media", {
+      const response = await fetch(getApiUrl("/api/media"), {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to fetch media");
@@ -57,7 +58,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
       const formData = new FormData();
       formData.append("image", file);
 
-      const response = await fetch("/api/media", {
+      const response = await fetch(getApiUrl("/api/media"), {
         method: "POST",
         body: formData,
         credentials: "include",

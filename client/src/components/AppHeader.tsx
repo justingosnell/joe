@@ -3,6 +3,7 @@ import { MapIcon, LogIn, User, LogOut, KeyRound } from "lucide-react";
 import { LoginModal } from "./LoginModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { getApiUrl } from "@/lib/api";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +25,7 @@ export function AppHeader() {
   const { data: settings } = useQuery<Record<string, string>>({
     queryKey: ["settings"],
     queryFn: async () => {
-      const response = await fetch("/api/settings");
+      const response = await fetch(getApiUrl("/api/settings"));
       if (!response.ok) return {};
       return response.json();
     },

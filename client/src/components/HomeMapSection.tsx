@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Maximize2, Minimize2, MapIcon } from "lucide-react";
+import { getApiUrl } from "@/lib/api";
 import {
   Select,
   SelectContent,
@@ -218,7 +219,7 @@ export function HomeMapSection() {
   const { data: locations = [], isLoading, error } = useQuery<Location[]>({
     queryKey: ["locations"],
     queryFn: async () => {
-      const response = await fetch("/api/locations");
+      const response = await fetch(getApiUrl("/api/locations"));
       if (!response.ok) throw new Error("Failed to fetch locations");
       return response.json();
     },

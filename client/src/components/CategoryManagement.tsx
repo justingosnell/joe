@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, GripVertical } from "lucide-react";
 import { CategoryDialog } from "@/components/CategoryDialog";
 import { useToast } from "@/hooks/use-toast";
+import { getApiUrl } from "@/lib/api";
 import type { Category, InsertCategory } from "@shared/schema";
 import {
   AlertDialog,
@@ -30,7 +31,7 @@ export function CategoryManagement() {
   const { data: categories = [], isLoading } = useQuery<Category[]>({
     queryKey: ["categories"],
     queryFn: async () => {
-      const response = await fetch("/api/categories");
+      const response = await fetch(getApiUrl("/api/categories"));
       if (!response.ok) throw new Error("Failed to fetch categories");
       return response.json();
     },
@@ -39,7 +40,7 @@ export function CategoryManagement() {
   // Create category mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertCategory) => {
-      const response = await fetch("/api/categories", {
+      const response = await fetch(getApiUrl("/api/categories"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

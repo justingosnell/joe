@@ -4,6 +4,7 @@ import session from "express-session";
 import createMemoryStore from "memorystore";
 import { storage, ensureStorageReady } from "./storage";
 import { runMigrations } from "./db";
+import { uploadFileToSupabase, getPublicUrl } from "./supabase-client";
 import bcrypt from "bcrypt";
 import { insertLocationSchema } from "@shared/schema";
 import { z } from "zod";
@@ -282,7 +283,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fileHash = computeFileHash(req.file.buffer);
       const storagePath = `media/${fileHash}-${Date.now()}-${req.file.originalname}`;
       
-      const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${process.env.SUPABASE_BUCKET}/${storagePath}`;
+      try {
+        await uploadFileToSupabase(
+          process.env.SUPABASE_BUCKET!,
+          storagePath,
+          req.file.buffer,
+          req.file.mimetype
+        );
+      } catch (uploadError) {
+        console.error("Failed to upload to Supabase:", uploadError);
+        return res.status(500).json({
+          message: "Failed to upload file to storage",
+          error: uploadError instanceof Error ? uploadError.message : "Unknown error",
+        });
+      }
+
+      const publicUrl = getPublicUrl(process.env.SUPABASE_BUCKET!, storagePath);
 
       const mediaItem = await storage.createMedia({
         filename: req.file.originalname,
@@ -360,7 +376,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fileHash = computeFileHash(req.file.buffer);
       const storagePath = `media/${fileHash}-${Date.now()}-${req.file.originalname}`;
       
-      const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${process.env.SUPABASE_BUCKET}/${storagePath}`;
+      try {
+        await uploadFileToSupabase(
+          process.env.SUPABASE_BUCKET!,
+          storagePath,
+          req.file.buffer,
+          req.file.mimetype
+        );
+      } catch (uploadError) {
+        console.error("Failed to upload to Supabase:", uploadError);
+        return res.status(500).json({
+          message: "Failed to upload file to storage",
+          error: uploadError instanceof Error ? uploadError.message : "Unknown error",
+        });
+      }
+
+      const publicUrl = getPublicUrl(process.env.SUPABASE_BUCKET!, storagePath);
 
       const mediaItem = await storage.createMedia({
         filename: req.file.originalname,

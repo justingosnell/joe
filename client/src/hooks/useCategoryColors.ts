@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import { getApiUrl } from "@/lib/api";
 import type { Category } from "@shared/schema";
 
 export function useCategoryColors() {
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ["categories"],
     queryFn: async () => {
-      const response = await fetch("/api/categories");
+      const response = await fetch(getApiUrl("/api/categories"));
       if (!response.ok) throw new Error("Failed to fetch categories");
       return response.json();
     },
