@@ -423,17 +423,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ Admin Routes ============
 
-  // Cleanup orphaned media files (admin only)
-  // NOTE: Images are now stored as base64 in the database, so this endpoint is deprecated
-  // Keeping for backward compatibility - just returns success with no action
+  // Cleanup orphaned media files and duplicates (admin only)
   app.post("/api/admin/cleanup-media", requireAuth, async (req: Request, res: Response) => {
     try {
-      console.log("📦 Media cleanup: Images stored in database, no disk cleanup needed");
+      const allMedia = await storage.getAllMedia();
+      
+      // Find duplicates by URL
+      const urlMap = new Map<string, typeof allMedia>();
+      const toDelete: string[] = [];
+      
+      for (const media of allMedia) {
+        if (!urlMap.has(media.url)) {
+          urlMap.set(media.url, media);
+        } else {
+          // This is a duplicate - mark it for deletion
+          toDelete.push(media.id);
+        }
+      }
+      
+      // Delete all duplicates
+      let deletedCount = 0;
+      for (const mediaId of toDelete) {
+        const success = await storage.deleteMedia(mediaId);
+        if (success) deletedCount++;
+      }
+      
+      console.log(`🧹 Cleaned up ${deletedCount} duplicate media entries`);
+      
       res.json({
-        message: "Images are now stored in database. No disk cleanup needed.",
-        deletedCount: 0,
-        freedMB: "0",
-        deletedFiles: [],
+        message: `Cleanup complete. Removed ${deletedCount} duplicate media entries.`,
+        deletedCount,
+        remainingCount: allMedia.length - deletedCount,
       });
     } catch (error) {
       console.error("❌ Cleanup error:", error);

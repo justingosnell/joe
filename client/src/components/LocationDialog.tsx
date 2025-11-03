@@ -254,11 +254,9 @@ export function LocationDialog({
       }
 
       const data = await response.json();
-      const baseUrl = getApiUrl("/api/upload").split("/api/upload")[0];
-      const fullUrl = baseUrl + data.url;
       
-      form.setValue("photoUrl", fullUrl);
-      setPreviewUrl(fullUrl);
+      form.setValue("photoUrl", data.url);
+      setPreviewUrl(data.url);
       
       toast({
         title: "Upload successful",

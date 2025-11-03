@@ -133,7 +133,7 @@ export function LogoSelectorDialog({
             <p className="text-sm font-medium mb-2">Selected Image:</p>
             <div className="flex items-center gap-3">
               <img
-                src={window.location.origin + selectedMedia.url}
+                src={selectedMedia.url}
                 alt={selectedMedia.alt || selectedMedia.originalName}
                 className="w-16 h-16 object-contain rounded border"
               />
