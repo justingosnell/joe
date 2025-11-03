@@ -462,6 +462,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Fix broken media URLs (admin only)
+  app.post("/api/admin/fix-broken-urls", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const allMedia = await storage.getAllMedia();
+      
+      // Find entries with undefined in URL
+      const brokenMedia = allMedia.filter(m => m.url.includes("undefined"));
+      console.log(`🔍 Found ${brokenMedia.length} entries with broken URLs`);
+      
+      if (brokenMedia.length === 0) {
+        return res.json({
+          message: "No broken URLs found",
+          fixedCount: 0,
+        });
+      }
+      
+      // Fix each broken URL
+      const supabaseUrl = process.env.SUPABASE_URL || "https://fpaxndekwubupxlubvxj.supabase.co";
+      const bucket = process.env.SUPABASE_BUCKET || "imageStore";
+      
+      let fixedCount = 0;
+      for (const item of brokenMedia) {
+        // Extract the storage path from the broken URL
+        // From: undefined/storage/v1/object/public/undefined/media/...
+        // Extract: media/...
+        const storagePathMatch = item.url.match(/media\/.*$/);
+        if (!storagePathMatch) {
+          console.log(`⚠️  Could not extract storage path from: ${item.url}`);
+          continue;
+        }
+        
+        const storagePath = storagePathMatch[0];
+        const fixedUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${storagePath}`;
+        
+        try {
+          const updated = await storage.updateMedia(item.id, { url: fixedUrl });
+          if (updated) fixedCount++;
+          console.log(`✓ Fixed: ${item.originalName}`);
+        } catch (error) {
+          console.error(`✗ Failed to fix ${item.id}:`, error);
+        }
+      }
+      
+      console.log(`✅ Fixed ${fixedCount} broken URLs!`);
+      
+      res.json({
+        message: `Fixed ${fixedCount} broken URLs`,
+        fixedCount,
+        remainingCount: allMedia.length - fixedCount,
+      });
+    } catch (error) {
+      console.error("❌ Fix error:", error);
+      const errorMsg = error instanceof Error ? error.message : "Fix failed";
+      res.status(500).json({ message: errorMsg });
+    }
+  });
+
   // ============ Location Routes (Public) ============
   
   // Get all locations (public) with optional search
