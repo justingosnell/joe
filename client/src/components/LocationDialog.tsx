@@ -204,9 +204,8 @@ export function LocationDialog({
   };
 
   const handleMediaSelect = (media: Media) => {
-    const fullUrl = window.location.origin + media.url;
-    form.setValue("photoUrl", fullUrl);
-    setPreviewUrl(fullUrl);
+    form.setValue("photoUrl", media.url);
+    setPreviewUrl(media.url);
     toast({
       title: "Image selected",
       description: "Image from library has been selected",

@@ -324,7 +324,7 @@ export function MediaLibrary({ open, onOpenChange, onSelect, mode = "select" }: 
                     >
                       <div className="aspect-square relative bg-muted">
                         <img
-                          src={window.location.origin + media.url}
+                          src={media.url}
                           alt={media.alt || media.originalName || media.filename}
                           className="w-full h-full object-cover"
                           loading="lazy"

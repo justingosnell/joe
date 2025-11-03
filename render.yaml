@@ -11,15 +11,15 @@ services:
       - key: PORT
         value: 3000
       - key: DATABASE_URL
-        sync: false
+        sync: true
       - key: SUPABASE_URL
-        sync: false
+        sync: true
       - key: SUPABASE_KEY
-        sync: false
+        sync: true
       - key: SUPABASE_BUCKET
-        sync: false
+        sync: true
       - key: SESSION_SECRET
-        sync: false
+        sync: true
     nixpacks:
       aptPackages:
         - build-essential
