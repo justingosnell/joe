@@ -519,6 +519,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Fix broken location photo URLs (admin only)
+  app.post("/api/admin/fix-location-urls", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const allLocations = await storage.getAllLocations();
+      
+      // Find entries with undefined in photoUrl
+      const brokenLocations = allLocations.filter(l => l.photoUrl && l.photoUrl.includes("undefined"));
+      console.log(`🔍 Found ${brokenLocations.length} locations with broken URLs`);
+      
+      if (brokenLocations.length === 0) {
+        return res.json({
+          message: "No broken location URLs found",
+          fixedCount: 0,
+        });
+      }
+      
+      // Fix each broken URL
+      const supabaseUrl = process.env.SUPABASE_URL || "https://fpaxndekwubupxlubvxj.supabase.co";
+      const bucket = process.env.SUPABASE_BUCKET || "imageStore";
+      
+      let fixedCount = 0;
+      for (const item of brokenLocations) {
+        // Extract the storage path from the broken URL
+        // From: undefined/storage/v1/object/public/undefined/media/...
+        // Extract: media/...
+        const storagePathMatch = item.photoUrl.match(/media\/.*$/);
+        if (!storagePathMatch) {
+          console.log(`⚠️  Could not extract storage path from: ${item.photoUrl}`);
+          continue;
+        }
+        
+        const storagePath = storagePathMatch[0];
+        const fixedUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${storagePath}`;
+        
+        try {
+          const updated = await storage.updateLocation(item.id, { photoUrl: fixedUrl });
+          if (updated) fixedCount++;
+          console.log(`✓ Fixed: ${item.name}`);
+        } catch (error) {
+          console.error(`✗ Failed to fix ${item.id}:`, error);
+        }
+      }
+      
+      console.log(`✅ Fixed ${fixedCount} location URLs!`);
+      
+      res.json({
+        message: `Fixed ${fixedCount} location URLs`,
+        fixedCount,
+        remainingCount: allLocations.length - fixedCount,
+      });
+    } catch (error) {
+      console.error("❌ Fix error:", error);
+      const errorMsg = error instanceof Error ? error.message : "Fix failed";
+      res.status(500).json({ message: errorMsg });
+    }
+  });
+
   // ============ Location Routes (Public) ============
   
   // Get all locations (public) with optional search
