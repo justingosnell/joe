@@ -34,7 +34,7 @@ export default function Home() {
         category: "muffler-men",
         count: locations.filter(loc => loc.category === "muffler-men").length,
         icon: "🗿",
-        color: "#f97316",
+        color: "#0ea5e9",
       },
       {
         title: "World's Largest",
@@ -42,7 +42,7 @@ export default function Home() {
         category: "worlds-largest",
         count: locations.filter(loc => loc.category === "worlds-largest").length,
         icon: "🏆",
-        color: "#eab308",
+        color: "#0ea5e9",
       },
       {
         title: "Unique Finds",
@@ -50,7 +50,7 @@ export default function Home() {
         category: "unique-finds",
         count: locations.filter(loc => loc.category === "unique-finds").length,
         icon: "✨",
-        color: "#10b981",
+        color: "#0ea5e9",
       },
     ];
   }, [locations]);
@@ -80,39 +80,39 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 via-orange-50 to-yellow-50">
+    <div className="min-h-screen bg-background">
       <AppHeader />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Hero Section */}
-        <section className="text-center mb-12 py-8 px-6 rounded-lg" style={{ backgroundColor: "#dde4e7" }}>
-          <p className="text-xl text-amber-800 mb-8 max-w-2xl mx-auto">
+        <section className="text-center mb-12 py-8 px-6 rounded-lg bg-card border border-border">
+          <p className="text-xl text-foreground mb-8 max-w-2xl mx-auto">
             Discover America's most peculiar landmarks, oversized oddities, and forgotten wonders
           </p>
           
           {/* Stats */}
           <div className="flex justify-center gap-8 mb-8">
             <div className="text-center">
-              <div className="text-3xl font-bold text-orange-300">{locations.length}</div>
-              <div className="text-sm text-amber-700">Attractions</div>
+              <div className="text-3xl font-bold text-primary">{locations.length}</div>
+              <div className="text-sm text-muted-foreground">Attractions</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-orange-300">
+              <div className="text-3xl font-bold text-primary">
                 {new Set(locations.map(l => l.state)).size}
               </div>
-              <div className="text-sm text-amber-700">States</div>
+              <div className="text-sm text-muted-foreground">States</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-orange-300">
+              <div className="text-3xl font-bold text-primary">
                 {locations.filter(l => l.photoUrl).length}
               </div>
-              <div className="text-sm text-amber-700">Photos</div>
+              <div className="text-sm text-muted-foreground">Photos</div>
             </div>
           </div>
         </section>
 
         {/* Slideshow Section */}
-        <section className="mb-12 py-8 px-6 rounded-lg" style={{ backgroundColor: "#f3f4f6" }}>
+        <section className="mb-12 py-8 px-6 rounded-lg bg-card border border-border">
           <MediaSlideshow />
         </section>
 
@@ -120,30 +120,30 @@ export default function Home() {
 
         {/* Category Collections */}
         <section className="mb-12">
-          <h2 className="text-3xl font-bold mb-6 text-slate-900">Quirky Collections</h2>
+          <h2 className="text-3xl font-bold mb-6 text-foreground">Quirky Collections</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {categoryCollections.map((collection) => (
               <Card
                 key={collection.category}
-                className="border-0 shadow-2xl cursor-pointer group bg-blue-50 rounded-lg overflow-hidden"
+                className="border shadow-md cursor-pointer group bg-card rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
               >
-                <CardHeader className="bg-blue-50">
+                <CardHeader className="bg-card">
                 </CardHeader>
-                <CardContent className="pt-6 bg-blue-50">
+                <CardContent className="pt-6 bg-card">
                   <div className="text-5xl mb-3 group-hover:scale-110 transition-transform">
                     {collection.icon}
                   </div>
-                  <CardTitle className="text-xl text-slate-900">
+                  <CardTitle className="text-xl text-foreground">
                     {collection.title}
                   </CardTitle>
-                  <CardDescription className="text-slate-600">
+                  <CardDescription className="text-muted-foreground">
                     {collection.description}
                   </CardDescription>
                   <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-slate-700">
+                    <span className="text-2xl font-bold text-primary">
                       {collection.count}
                     </span>
-                    <Button className="border-2 border-white text-white bg-transparent hover:bg-white/20">
+                    <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
                       Explore →
                     </Button>
                   </div>
@@ -158,17 +158,17 @@ export default function Home() {
 
         {/* Call to Action */}
         <section className="text-center py-12">
-          <Card className="border-2 border-orange-300 bg-gradient-to-br from-orange-100 to-amber-100 shadow-xl">
+          <Card className="border-2 border-primary bg-card shadow-lg">
             <CardHeader>
-              <CardTitle className="text-3xl text-amber-900">
+              <CardTitle className="text-3xl text-foreground">
                 Know of an Offbeat Sight?
               </CardTitle>
-              <CardDescription className="text-lg text-amber-800">
+              <CardDescription className="text-lg text-muted-foreground">
                 Help us document America's roadside wonders. Share your discoveries!
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button size="lg" className="bg-orange-500 hover:bg-orange-600 text-white text-lg px-8">
+              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8">
                 Submit a Tip
               </Button>
             </CardContent>
@@ -177,10 +177,10 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-amber-900 text-amber-100 py-8 mt-12">
+      <footer className="bg-card border-t border-border text-foreground py-8 mt-12">
         <div className="container mx-auto px-4 text-center">
           <p className="text-lg mb-2">RoadsideMapper</p>
-          <p className="text-sm text-amber-300">
+          <p className="text-sm text-muted-foreground">
             Documenting America's quirky roadside attractions, one oddity at a time.
           </p>
         </div>
