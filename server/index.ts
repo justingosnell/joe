@@ -23,7 +23,8 @@ app.use((req, res, next) => {
   const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:3000',
-    'https://backend-x65t.onrender.com'
+    'https://backend-x65t.onrender.com',
+    'https://joeyb.onrender.com'
   ];
   
   // Allow requests from the same origin (frontend served from same Render instance)
