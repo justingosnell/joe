@@ -280,18 +280,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
+      console.log("📤 Upload started:", {
+        filename: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+      });
+
       const fileHash = computeFileHash(req.file.buffer);
       const storagePath = `media/${fileHash}-${Date.now()}-${req.file.originalname}`;
       
+      console.log("🔑 Supabase config:", {
+        url: process.env.SUPABASE_URL ? "✓" : "✗",
+        key: process.env.SUPABASE_KEY ? "✓" : "✗",
+        bucket: process.env.SUPABASE_BUCKET || "NOT SET",
+      });
+
       try {
+        console.log("📤 Uploading to Supabase...");
         await uploadFileToSupabase(
           process.env.SUPABASE_BUCKET!,
           storagePath,
           req.file.buffer,
           req.file.mimetype
         );
+        console.log("✅ Supabase upload successful");
       } catch (uploadError) {
-        console.error("Failed to upload to Supabase:", uploadError);
+        console.error("❌ Failed to upload to Supabase:", {
+          error: uploadError,
+          message: uploadError instanceof Error ? uploadError.message : "Unknown",
+          stack: uploadError instanceof Error ? uploadError.stack : undefined,
+        });
         return res.status(500).json({
           message: "Failed to upload file to storage",
           error: uploadError instanceof Error ? uploadError.message : "Unknown error",
@@ -300,6 +318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const publicUrl = getPublicUrl(process.env.SUPABASE_BUCKET!, storagePath);
 
+      console.log("💾 Creating media record in database...");
       const mediaItem = await storage.createMedia({
         filename: req.file.originalname,
         originalName: req.file.originalname,
@@ -310,13 +329,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         height: undefined,
         alt: "",
         caption: "",
-        data: null,
         uploadedBy: req.session.userId,
-        storagePath,
       });
 
+      console.log("✅ Media record created:", mediaItem.id);
       res.status(201).json(mediaItem);
     } catch (error) {
+      console.error("❌ Upload error:", {
+        error,
+        message: error instanceof Error ? error.message : "Unknown",
+        stack: error instanceof Error ? error.stack : undefined,
+      });
       const errorMsg = error instanceof Error ? error.message : "Failed to upload file";
       res.status(500).json({ message: errorMsg });
     }
@@ -403,9 +426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         height: undefined,
         alt: "",
         caption: "",
-        data: null,
         uploadedBy: req.session.userId,
-        storagePath,
       });
 
       res.json({ 

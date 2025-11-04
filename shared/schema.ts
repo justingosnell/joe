@@ -67,7 +67,7 @@ export const insertMediaSchema = createInsertSchema(media).omit({
   uploadedAt: true,
 }).extend({
   data: z.string().optional(),
-  storagePath: z.string().min(1),
+  storagePath: z.string().optional(),
 });
 
 export type InsertMedia = z.infer<typeof insertMediaSchema>;
