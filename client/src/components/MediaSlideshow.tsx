@@ -90,7 +90,7 @@ export function MediaSlideshow() {
         variant="ghost"
         size="icon"
         onClick={goToPrevious}
-        className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white/90 text-amber-900 opacity-0 group-hover:opacity-100 transition-opacity duration-300 h-10 w-10 md:h-12 md:w-12"
+        className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white hover:scale-110 text-amber-900 transition-all duration-200 h-10 w-10 md:h-12 md:w-12"
         aria-label="Previous image"
       >
         <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" />
@@ -100,7 +100,7 @@ export function MediaSlideshow() {
         variant="ghost"
         size="icon"
         onClick={goToNext}
-        className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white/90 text-amber-900 opacity-0 group-hover:opacity-100 transition-opacity duration-300 h-10 w-10 md:h-12 md:w-12"
+        className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white hover:scale-110 text-amber-900 transition-all duration-200 h-10 w-10 md:h-12 md:w-12"
         aria-label="Next image"
       >
         <ChevronRight className="h-5 w-5 md:h-6 md:w-6" />
