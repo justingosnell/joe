@@ -118,6 +118,9 @@ export default function Home() {
 
 
 
+        {/* Interactive Map Section */}
+        <HomeMapSection />
+
         {/* Category Collections */}
         <section className="mb-12">
           <h2 className="text-3xl font-bold mb-6 text-foreground">Quirky Collections</h2>
@@ -152,9 +155,6 @@ export default function Home() {
             ))}
           </div>
         </section>
-
-        {/* Interactive Map Section */}
-        <HomeMapSection />
 
         {/* Call to Action */}
         <section className="text-center py-12">
