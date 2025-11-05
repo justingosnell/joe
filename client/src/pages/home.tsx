@@ -102,12 +102,6 @@ export default function Home() {
               </div>
               <div className="text-sm text-muted-foreground">States</div>
             </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-primary">
-                {locations.filter(l => l.photoUrl).length}
-              </div>
-              <div className="text-sm text-muted-foreground">Photos</div>
-            </div>
           </div>
         </section>
 
