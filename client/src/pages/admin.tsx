@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/api";
-import { LogOut, Plus, MapPin, Search, X, Image as ImageIcon, Upload, FileUp, FolderTree, Home, Download } from "lucide-react";
+import { LogOut, Plus, MapPin, Search, X, Image as ImageIcon, Upload, FileUp, FolderTree, Home } from "lucide-react";
 import { LocationTable } from "@/components/LocationTable";
 import { LocationDialog } from "@/components/LocationDialog";
 import { MediaLibrary } from "@/components/MediaLibrary";
@@ -157,48 +157,6 @@ export default function Admin() {
     setLocation("/");
   };
 
-  const handleBulkExport = async () => {
-    try {
-      const response = await fetch(getApiUrl("/api/locations/bulk-export"), {
-        credentials: "include",
-      });
-      
-      if (!response.ok) {
-        toast({
-          title: "Export Failed",
-          description: "Failed to export locations",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Get the file content as blob
-      const blob = await response.blob();
-      
-      // Create download link and trigger download
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `locations-export-${new Date().toISOString().split('T')[0]}.txt`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      toast({
-        title: "Export Successful",
-        description: "Locations exported successfully",
-      });
-    } catch (error) {
-      console.error("Export error:", error);
-      toast({
-        title: "Export Failed",
-        description: "Failed to export locations",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleEdit = (location: Location) => {
     setEditingLocation(location);
     setIsDialogOpen(true);
@@ -290,11 +248,6 @@ export default function Admin() {
                       </CardDescription>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
-                      <Button onClick={handleBulkExport} variant="outline" className="flex-1 sm:flex-none">
-                        <Download className="mr-2 h-4 w-4" />
-                        <span className="hidden sm:inline">Bulk Export</span>
-                        <span className="sm:hidden">Export</span>
-                      </Button>
                       <Button onClick={() => setIsBulkUploadOpen(true)} variant="outline" className="flex-1 sm:flex-none">
                         <FileUp className="mr-2 h-4 w-4" />
                         <span className="hidden sm:inline">Bulk Upload</span>
