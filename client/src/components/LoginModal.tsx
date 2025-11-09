@@ -212,12 +212,6 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
                   )}
                 </Button>
               </form>
-              <div className="text-center text-sm text-muted-foreground">
-                <p>Default credentials:</p>
-                <p className="font-mono text-xs mt-1">
-                  username: <strong>admin</strong> / password: <strong>admin123</strong>
-                </p>
-              </div>
             </TabsContent>
 
             <TabsContent value="change-password" className="space-y-4">
