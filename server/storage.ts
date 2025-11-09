@@ -1080,4 +1080,30 @@ export async function ensureStorageReady(): Promise<void> {
   if (!storage.initialized) {
     throw new Error("Storage failed to initialize within timeout");
   }
+
+  // Initialize default admin account from environment variables
+  const adminUsername = process.env.INIT_ADMIN_USERNAME;
+  const adminPassword = process.env.INIT_ADMIN_PASSWORD;
+
+  if (adminUsername && adminPassword) {
+    try {
+      const existingAdmin = await storage.getUserByUsername(adminUsername);
+      if (!existingAdmin) {
+        console.log("🔐 Creating initial admin account from environment variables...");
+        const bcrypt = await import("bcrypt");
+        const hashedPassword = await bcrypt.default.hash(adminPassword, 10);
+        await storage.createUser({
+          username: adminUsername,
+          password: hashedPassword,
+          role: "admin",
+        });
+        console.log("✅ Initial admin account created successfully");
+      } else {
+        console.log("ℹ️  Admin account already exists, skipping initialization");
+      }
+    } catch (error) {
+      console.error("❌ Failed to create initial admin account:", error);
+      throw error;
+    }
+  }
 }
