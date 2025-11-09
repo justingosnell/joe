@@ -11,8 +11,14 @@ export interface IStorage {
   // User methods
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
-  updateUserPassword(id: string, newPassword: string): Promise<boolean>;
+  updateUserPassword(id: string, newPassword: string, byUserId?: string): Promise<boolean>;
+  recordFailedLogin(userId: string): Promise<boolean>;
+  resetFailedLogins(userId: string): Promise<boolean>;
+  lockUser(userId: string): Promise<boolean>;
+  unlockUser(userId: string): Promise<boolean>;
+  setMustChangePassword(userId: string): Promise<boolean>;
   
   // Location methods
   getAllLocations(): Promise<Location[]>;
@@ -60,13 +66,22 @@ export class MemStorage implements IStorage {
     this.seedMockLocations();
   }
 
-  // Seed default admin account
+  // Seed default admin account (only if INIT_ADMIN_USERNAME env var is set)
   private async seedDefaultAdmin() {
-    const existingAdmin = await this.getUserByUsername("admin");
-    if (!existingAdmin) {
-      const hashedPassword = await bcrypt.hash("admin123", 10);
-      await this.createUser({ username: "admin", password: hashedPassword });
-      console.log("✓ Default admin account created (username: admin, password: admin123)");
+    const adminUsername = process.env.INIT_ADMIN_USERNAME;
+    const adminPassword = process.env.INIT_ADMIN_PASSWORD;
+    
+    if (adminUsername && adminPassword) {
+      const existingAdmin = await this.getUserByUsername(adminUsername);
+      if (!existingAdmin) {
+        const hashedPassword = await bcrypt.hash(adminPassword, 10);
+        await this.createUser({
+          username: adminUsername,
+          password: hashedPassword,
+          role: "admin",
+        });
+        console.log(`✓ Admin account created: ${adminUsername}`);
+      }
     }
   }
 
@@ -319,9 +334,24 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
+    const now = new Date().toISOString();
+    const user: User = {
+      ...insertUser,
+      id,
+      role: insertUser.role || "manager",
+      isLocked: "false",
+      failedLoginAttempts: "0",
+      lastFailedLogin: null,
+      lastPasswordChange: now,
+      mustChangePassword: "false",
+      createdAt: now,
+    };
     this.users.set(id, user);
     return user;
   }
@@ -331,8 +361,76 @@ export class MemStorage implements IStorage {
     if (!user) return false;
     
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
-    this.users.set(id, user);
+    const updatedUser = {
+      ...user,
+      password: hashedPassword,
+      lastPasswordChange: new Date().toISOString(),
+      mustChangePassword: "false",
+      failedLoginAttempts: "0",
+    };
+    this.users.set(id, updatedUser);
+    return true;
+  }
+
+  async recordFailedLogin(userId: string): Promise<boolean> {
+    const user = this.users.get(userId);
+    if (!user) return false;
+    
+    const attempts = parseInt(user.failedLoginAttempts || "0", 10) + 1;
+    const isLocked = attempts >= 5;
+    
+    const updatedUser = {
+      ...user,
+      failedLoginAttempts: attempts.toString(),
+      lastFailedLogin: new Date().toISOString(),
+      isLocked: isLocked ? "true" : "false",
+    };
+    this.users.set(userId, updatedUser);
+    return true;
+  }
+
+  async resetFailedLogins(userId: string): Promise<boolean> {
+    const user = this.users.get(userId);
+    if (!user) return false;
+    
+    const updatedUser = {
+      ...user,
+      failedLoginAttempts: "0",
+      lastFailedLogin: null,
+    };
+    this.users.set(userId, updatedUser);
+    return true;
+  }
+
+  async lockUser(userId: string): Promise<boolean> {
+    const user = this.users.get(userId);
+    if (!user) return false;
+    
+    const updatedUser = { ...user, isLocked: "true" };
+    this.users.set(userId, updatedUser);
+    return true;
+  }
+
+  async unlockUser(userId: string): Promise<boolean> {
+    const user = this.users.get(userId);
+    if (!user) return false;
+    
+    const updatedUser = {
+      ...user,
+      isLocked: "false",
+      failedLoginAttempts: "0",
+      lastFailedLogin: null,
+    };
+    this.users.set(userId, updatedUser);
+    return true;
+  }
+
+  async setMustChangePassword(userId: string): Promise<boolean> {
+    const user = this.users.get(userId);
+    if (!user) return false;
+    
+    const updatedUser = { ...user, mustChangePassword: "true" };
+    this.users.set(userId, updatedUser);
     return true;
   }
 
@@ -491,13 +589,22 @@ export class DbStorage implements IStorage {
     }
   }
 
-  // Seed default admin account
+  // Seed default admin account (only if INIT_ADMIN_USERNAME env var is set)
   private async seedDefaultAdmin() {
-    const existingAdmin = await this.getUserByUsername("admin");
-    if (!existingAdmin) {
-      const hashedPassword = await bcrypt.hash("admin123", 10);
-      await this.createUser({ username: "admin", password: hashedPassword });
-      console.log("✓ Default admin account created (username: admin, password: admin123)");
+    const adminUsername = process.env.INIT_ADMIN_USERNAME;
+    const adminPassword = process.env.INIT_ADMIN_PASSWORD;
+    
+    if (adminUsername && adminPassword) {
+      const existingAdmin = await this.getUserByUsername(adminUsername);
+      if (!existingAdmin) {
+        const hashedPassword = await bcrypt.hash(adminPassword, 10);
+        await this.createUser({
+          username: adminUsername,
+          password: hashedPassword,
+          role: "admin",
+        });
+        console.log(`✓ Admin account created: ${adminUsername}`);
+      }
     }
   }
 
@@ -753,6 +860,10 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const result = await db.insert(users).values(insertUser).returning();
     return result[0];
@@ -760,9 +871,72 @@ export class DbStorage implements IStorage {
 
   async updateUserPassword(id: string, newPassword: string): Promise<boolean> {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const now = new Date().toISOString();
     const result = await db.update(users)
-      .set({ password: hashedPassword })
+      .set({
+        password: hashedPassword,
+        lastPasswordChange: now,
+        mustChangePassword: "false",
+        failedLoginAttempts: "0",
+      })
       .where(eq(users.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  async recordFailedLogin(userId: string): Promise<boolean> {
+    const user = await this.getUser(userId);
+    if (!user) return false;
+
+    const attempts = parseInt(user.failedLoginAttempts || "0", 10) + 1;
+    const isLocked = attempts >= 5;
+
+    const result = await db.update(users)
+      .set({
+        failedLoginAttempts: attempts.toString(),
+        lastFailedLogin: new Date().toISOString(),
+        isLocked: isLocked ? "true" : "false",
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return result.length > 0;
+  }
+
+  async resetFailedLogins(userId: string): Promise<boolean> {
+    const result = await db.update(users)
+      .set({
+        failedLoginAttempts: "0",
+        lastFailedLogin: null,
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return result.length > 0;
+  }
+
+  async lockUser(userId: string): Promise<boolean> {
+    const result = await db.update(users)
+      .set({ isLocked: "true" })
+      .where(eq(users.id, userId))
+      .returning();
+    return result.length > 0;
+  }
+
+  async unlockUser(userId: string): Promise<boolean> {
+    const result = await db.update(users)
+      .set({
+        isLocked: "false",
+        failedLoginAttempts: "0",
+        lastFailedLogin: null,
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return result.length > 0;
+  }
+
+  async setMustChangePassword(userId: string): Promise<boolean> {
+    const result = await db.update(users)
+      .set({ mustChangePassword: "true" })
+      .where(eq(users.id, userId))
       .returning();
     return result.length > 0;
   }

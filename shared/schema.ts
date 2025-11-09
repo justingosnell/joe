@@ -7,11 +7,21 @@ export const users = pgTable("users", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  role: text("role").notNull().default("manager"), // "admin" or "manager"
+  isLocked: text("is_locked").notNull().default("false"), // "true" or "false"
+  failedLoginAttempts: text("failed_login_attempts").notNull().default("0"),
+  lastFailedLogin: text("last_failed_login"),
+  lastPasswordChange: text("last_password_change").notNull().default(sql`CURRENT_TIMESTAMP`),
+  mustChangePassword: text("must_change_password").notNull().default("false"), // "true" or "false"
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
+  role: true,
+}).extend({
+  role: z.enum(["admin", "manager"]).optional().default("manager"),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

@@ -104,7 +104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ Authentication Routes ============
   
-  // Login
+  // Login with security features (account lockout, failed attempt tracking)
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {
       const { username, password } = req.body;
@@ -115,13 +115,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const user = await storage.getUserByUsername(username);
       if (!user) {
+        // Generic message to prevent username enumeration
         return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      // Check if account is locked
+      if (user.isLocked === "true") {
+        return res.status(403).json({
+          message: "Account is locked. Please contact an administrator.",
+        });
       }
 
       const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
+        // Record failed login attempt
+        await storage.recordFailedLogin(user.id);
         return res.status(401).json({ message: "Invalid credentials" });
       }
+
+      // Reset failed login attempts on successful login
+      await storage.resetFailedLogins(user.id);
 
       req.session.userId = user.id;
       
@@ -135,7 +148,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ 
         message: "Login successful",
-        user: { id: user.id, username: user.username }
+        user: {
+          id: user.id,
+          username: user.username,
+          role: user.role,
+          mustChangePassword: user.mustChangePassword === "true",
+        },
       });
     } catch (error) {
       console.error("Login error:", error);
@@ -165,11 +183,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     res.json({ 
-      user: { id: user.id, username: user.username }
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        mustChangePassword: user.mustChangePassword === "true",
+      },
     });
   });
 
-  // Change password
+  // Change password (users can only change their own password)
   app.post("/api/auth/change-password", requireAuth, async (req: Request, res: Response) => {
     try {
       const { currentPassword, newPassword } = req.body;
@@ -200,6 +223,193 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Password changed successfully" });
     } catch (error) {
       console.error("Change password error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Middleware to check if user is admin
+  function requireAdmin(req: Request, res: Response, next: Function) {
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    // Will be checked in each endpoint after getting user details
+    next();
+  }
+
+  // ============ User Management Routes (Admin Only) ============
+
+  // Get all users (admin only)
+  app.get("/api/admin/users", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const currentUser = await storage.getUser(req.session.userId!);
+      if (!currentUser || currentUser.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden: Admin access required" });
+      }
+
+      const users = await storage.getAllUsers();
+      // Don't send password hashes
+      const safeUsers = users.map((u) => ({
+        id: u.id,
+        username: u.username,
+        role: u.role,
+        isLocked: u.isLocked === "true",
+        failedLoginAttempts: parseInt(u.failedLoginAttempts || "0", 10),
+        lastPasswordChange: u.lastPasswordChange,
+        createdAt: u.createdAt,
+        mustChangePassword: u.mustChangePassword === "true",
+      }));
+      res.json(safeUsers);
+    } catch (error) {
+      console.error("Get users error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create new user (admin only)
+  app.post("/api/admin/users", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const currentUser = await storage.getUser(req.session.userId!);
+      if (!currentUser || currentUser.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden: Admin access required" });
+      }
+
+      const { username, password, role } = req.body;
+
+      if (!username || !password) {
+        return res.status(400).json({ message: "Username and password are required" });
+      }
+
+      if (password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters long" });
+      }
+
+      if (role && !["admin", "manager"].includes(role)) {
+        return res.status(400).json({ message: "Role must be either 'admin' or 'manager'" });
+      }
+
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(409).json({ message: "Username already exists" });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const newUser = await storage.createUser({
+        username,
+        password: hashedPassword,
+        role: (role as "admin" | "manager") || "manager",
+      });
+
+      // Mark new user to change password on first login
+      await storage.setMustChangePassword(newUser.id);
+
+      res.status(201).json({
+        message: "User created successfully",
+        user: {
+          id: newUser.id,
+          username: newUser.username,
+          role: newUser.role,
+        },
+      });
+    } catch (error) {
+      console.error("Create user error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Reset user password (admin only)
+  app.post("/api/admin/users/:userId/reset-password", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const currentUser = await storage.getUser(req.session.userId!);
+      if (!currentUser || currentUser.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden: Admin access required" });
+      }
+
+      const { userId } = req.params;
+      const { newPassword } = req.body;
+
+      if (!newPassword) {
+        return res.status(400).json({ message: "New password is required" });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters long" });
+      }
+
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Prevent admin from resetting their own password via this endpoint
+      if (userId === req.session.userId) {
+        return res.status(400).json({
+          message: "Use the change-password endpoint to reset your own password",
+        });
+      }
+
+      const success = await storage.updateUserPassword(userId, newPassword);
+      if (!success) {
+        return res.status(500).json({ message: "Failed to reset password" });
+      }
+
+      // Mark user to change password on next login
+      await storage.setMustChangePassword(userId);
+
+      res.json({ message: "Password reset successfully. User must change it on next login." });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Lock user account (admin only)
+  app.post("/api/admin/users/:userId/lock", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const currentUser = await storage.getUser(req.session.userId!);
+      if (!currentUser || currentUser.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden: Admin access required" });
+      }
+
+      const { userId } = req.params;
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const success = await storage.lockUser(userId);
+      if (!success) {
+        return res.status(500).json({ message: "Failed to lock user" });
+      }
+
+      res.json({ message: "User account locked successfully" });
+    } catch (error) {
+      console.error("Lock user error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Unlock user account (admin only)
+  app.post("/api/admin/users/:userId/unlock", requireAdmin, async (req: Request, res: Response) => {
+    try {
+      const currentUser = await storage.getUser(req.session.userId!);
+      if (!currentUser || currentUser.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden: Admin access required" });
+      }
+
+      const { userId } = req.params;
+      const targetUser = await storage.getUser(userId);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const success = await storage.unlockUser(userId);
+      if (!success) {
+        return res.status(500).json({ message: "Failed to unlock user" });
+      }
+
+      res.json({ message: "User account unlocked successfully" });
+    } catch (error) {
+      console.error("Unlock user error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
