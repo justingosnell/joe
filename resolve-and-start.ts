@@ -88,7 +88,7 @@ async function resolveAndStart() {
       if (lastError) {
         console.warn(`Last error: ${lastError.message}`);
       }
-      console.log("💡 Node will use --dns-result-order=ipv4first to prefer IPv4\n");
+      console.log("💡 postgres client will force IPv4-only connections (family: 4)\n");
       console.log("🚀 Starting app...\n");
     }
     
@@ -102,8 +102,12 @@ async function resolveAndStart() {
 
 async function applySchemaFix(databaseUrl: string) {
   try {
+    // Force IPv4 in schema fix connection too
     const sql = postgres(databaseUrl, {
       ssl: { rejectUnauthorized: false },
+      socket: {
+        family: 4, // Force IPv4
+      },
     });
 
     // Read the SQL file if it exists

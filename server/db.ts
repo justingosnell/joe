@@ -15,10 +15,14 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL environment variable is not set");
 }
 
-// Create connection with SSL configuration for Render
+// Create connection with SSL configuration and forced IPv4 for Render deployment
 // Note: DATABASE_URL should already have IPv4 address resolved by resolve-and-start.ts
 const client = postgres(databaseUrl, {
   ssl: { rejectUnauthorized: false },
+  // Force IPv4 connection - Render has issues with IPv6
+  socket: {
+    family: 4, // 4 = IPv4, 6 = IPv6
+  },
 });
 
 // Create drizzle instance

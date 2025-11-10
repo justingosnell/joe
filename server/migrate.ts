@@ -16,6 +16,10 @@ if (!databaseUrl) {
 const sql = postgres(databaseUrl, { 
   max: 1,
   ssl: { rejectUnauthorized: false },
+  // Force IPv4 connection - Render has issues with IPv6
+  socket: {
+    family: 4, // 4 = IPv4, 6 = IPv6
+  },
 });
 const db = drizzle(sql);
 

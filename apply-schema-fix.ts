@@ -10,9 +10,13 @@ if (!databaseUrl) {
 
 console.log("🔧 Applying schema fix to users table...\n");
 
-// Create connection - just use the URL as-is, don't need IPv4 here since it's a one-off
+// Create connection with forced IPv4 for Render
 const sql = postgres(databaseUrl, {
   ssl: { rejectUnauthorized: false },
+  // Force IPv4 connection - Render has issues with IPv6
+  socket: {
+    family: 4, // 4 = IPv4, 6 = IPv6
+  },
 });
 
 try {
