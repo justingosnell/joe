@@ -4,7 +4,6 @@ import * as schema from "@shared/schema";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import path from "path";
 import { fileURLToPath } from "url";
-import { resolveDatabase } from "./ipv4-resolver";
 import { lookup } from "dns/promises";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -14,41 +13,63 @@ const migrationsFolder = path.resolve(__dirname, "..", "migrations");
 let client: postgres.Sql | null = null;
 let _db: ReturnType<typeof drizzle> | null = null;
 
-// Custom DNS lookup that only returns IPv4 addresses (required for Render which doesn't support IPv6)
-// This function signature matches what Node.js net module expects
-function ipv4OnlyLookup(
-  hostname: string,
-  options: any,
-  callback: (err: Error | null, address?: string, family?: number) => void
-): void {
-  lookup(hostname, { family: 4 })
-    .then(result => {
-      // Node.js net expects (err, address, family)
-      callback(null, result.address, result.family);
-    })
-    .catch(error => {
-      // Fallback: let postgres handle it by returning an error and letting it retry
-      console.warn(`⚠️  IPv4-only lookup failed for ${hostname}, falling back to default DNS`);
-      callback(error);
-    });
+// Force IPv4 address resolution by querying DNS directly
+async function resolveToIPv4(hostname: string): Promise<string> {
+  try {
+    console.log(`🔍 Resolving ${hostname} to IPv4...`);
+    const result = await lookup(hostname, { family: 4 });
+    console.log(`✅ Resolved to IPv4: ${result.address}`);
+    return result.address;
+  } catch (error) {
+    console.warn(`⚠️  Could not resolve ${hostname} to IPv4: ${(error as Error).message}`);
+    // Return hostname as-is and hope for IPv4
+    return hostname;
+  }
 }
 
 export async function initializeDatabase() {
   if (_db) return _db;
   
-  // Resolve DATABASE_URL hostname to IPv4 (with graceful fallback)
-  const resolvedUrl = await resolveDatabase();
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL environment variable is not set");
+  }
   
-  // Create connection with custom IPv4-only DNS lookup to prevent IPv6 on Render
-  client = postgres(resolvedUrl, {
-    ssl: { rejectUnauthorized: false },
-    onnotice: () => {}, // Suppress notice messages
-    // Pass custom IPv4-only lookup function for socket connections
-    lookup: ipv4OnlyLookup,
-  });
-  
-  _db = drizzle(client, { schema });
-  return _db;
+  try {
+    const urlObj = new URL(databaseUrl);
+    const hostname = urlObj.hostname;
+    
+    if (!hostname) {
+      throw new Error("Could not extract hostname from DATABASE_URL");
+    }
+    
+    let finalUrl = databaseUrl;
+    
+    // Only try to resolve if it's not already an IP address
+    if (!/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+      const ipv4 = await resolveToIPv4(hostname);
+      if (ipv4 !== hostname) {
+        finalUrl = databaseUrl.replace(hostname, ipv4);
+        console.log(`✅ Updated connection URL with IPv4 address`);
+      }
+    } else {
+      console.log(`✅ DATABASE_URL already has IPv4 address: ${hostname}`);
+    }
+    
+    // Create connection with localhost binding to force IPv4
+    client = postgres(finalUrl, {
+      ssl: { rejectUnauthorized: false },
+      socket: {
+        family: 4,  // Force IPv4
+      },
+    });
+    
+    _db = drizzle(client, { schema });
+    return _db;
+  } catch (error) {
+    console.error("❌ Failed to initialize database:", error);
+    throw error;
+  }
 }
 
 // Export getter that initializes on first access (for backward compatibility)
