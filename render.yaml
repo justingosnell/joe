@@ -4,7 +4,7 @@ services:
     env: node
     plan: starter
     buildCommand: npm install && npm run build
-    startCommand: npx tsx server/migrate.ts && npm run merge-data && npm start
+    startCommand: npx tsx resolve-and-start.ts
     envVars:
       - key: NODE_ENV
         value: production
@@ -19,6 +19,10 @@ services:
       - key: SUPABASE_BUCKET
         sync: true
       - key: SESSION_SECRET
+        sync: true
+      - key: INIT_ADMIN_USERNAME
+        sync: true
+      - key: INIT_ADMIN_PASSWORD
         sync: true
     nixpacks:
       aptPackages:

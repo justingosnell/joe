@@ -14,6 +14,8 @@ async function mergeData() {
       throw new Error("DATABASE_URL environment variable is not set");
     }
 
+    // Note: DATABASE_URL should already have IPv4 address resolved by resolve-and-start.ts
+
     // Read the export file (backup with all 53 locations)
     const exportPath = path.resolve(__dirname, "data-export.json");
     if (!fs.existsSync(exportPath)) {

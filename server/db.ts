@@ -16,6 +16,7 @@ if (!databaseUrl) {
 }
 
 // Create connection with SSL configuration for Render
+// Note: DATABASE_URL should already have IPv4 address resolved by resolve-and-start.ts
 const client = postgres(databaseUrl, {
   ssl: { rejectUnauthorized: false },
 });
@@ -23,7 +24,7 @@ const client = postgres(databaseUrl, {
 // Create drizzle instance
 export const db = drizzle(client, { schema });
 
-// Run migrations automatically on startup
+// Run migrations if needed
 export async function runMigrations() {
   try {
     console.log("🔄 Running database migrations...");
