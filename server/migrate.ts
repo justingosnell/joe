@@ -23,10 +23,7 @@ async function runMigrations() {
     try {
       console.log("🔗 Creating database connection...");
       client = postgres(resolvedUrl, { 
-        max: 1,
         ssl: { rejectUnauthorized: false },
-        connect_timeout: 15000, // 15 second connection timeout (increased from 10s)
-        idle_timeout: 5000, // Close idle connections after 5s
       });
       console.log("✅ Database connection created");
     } catch (connError) {

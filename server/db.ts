@@ -22,7 +22,6 @@ export async function initializeDatabase() {
   // Create connection with resolved IPv4 address
   client = postgres(resolvedUrl, {
     ssl: { rejectUnauthorized: false },
-    connect_timeout: 15000, // 15 second connection timeout
   });
   
   _db = drizzle(client, { schema });
