@@ -568,44 +568,32 @@ export class MemStorage implements IStorage {
 // Database Storage Implementation
 export class DbStorage implements IStorage {
   public initialized = false;
+  private seeded = false;
 
   constructor() {
-    // Initialize asynchronously without blocking constructor
-    this.init().catch((err) => {
-      console.error("❌ Failed to initialize storage:", err);
-      process.exit(1);
-    });
+    // Don't initialize here - wait for ensureStorageReady()
+    // This allows the database to be set up first
+    this.initialized = true; // Mark as ready immediately since DB access is lazy
   }
 
-  private async init() {
+  private async performSeeding() {
+    if (this.seeded) return;
+    
     try {
       await this.seedDefaultAdmin();
       await this.seedDefaultCategories();
       await this.seedMockLocations();
-      this.initialized = true;
+      this.seeded = true;
     } catch (error) {
-      console.error("❌ Storage initialization error:", error);
+      console.error("❌ Storage seeding error:", error);
       throw error;
     }
   }
 
   // Seed default admin account (only if INIT_ADMIN_USERNAME env var is set)
   private async seedDefaultAdmin() {
-    const adminUsername = process.env.INIT_ADMIN_USERNAME;
-    const adminPassword = process.env.INIT_ADMIN_PASSWORD;
-    
-    if (adminUsername && adminPassword) {
-      const existingAdmin = await this.getUserByUsername(adminUsername);
-      if (!existingAdmin) {
-        const hashedPassword = await bcrypt.hash(adminPassword, 10);
-        await this.createUser({
-          username: adminUsername,
-          password: hashedPassword,
-          role: "admin",
-        });
-        console.log(`✓ Admin account created: ${adminUsername}`);
-      }
-    }
+    // Note: This is now called from ensureStorageReady() after database is initialized
+    // If seeding from environment, it's handled in ensureStorageReady() for consistency
   }
 
   // Seed default categories
@@ -1071,14 +1059,14 @@ export const storage = new DbStorage();
 
 // Add a method to wait for initialization if needed
 export async function ensureStorageReady(): Promise<void> {
-  // Give storage time to initialize
-  let attempts = 0;
-  while (!storage.initialized && attempts < 50) {
-    await new Promise(resolve => setTimeout(resolve, 100));
-    attempts++;
-  }
-  if (!storage.initialized) {
-    throw new Error("Storage failed to initialize within timeout");
+  // Perform seeding now that database is initialized
+  try {
+    console.log("🌱 Seeding default data...");
+    await (storage as any).performSeeding();
+    console.log("✅ Default data seeded successfully");
+  } catch (error) {
+    console.error("❌ Failed to seed default data:", error);
+    throw error;
   }
 
   // Initialize default admin account from environment variables
