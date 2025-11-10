@@ -1,4 +1,4 @@
-import { Calendar, MapPin, Tag, Info } from "lucide-react";
+import { Calendar, MapPin, Tag, Info, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useCategoryColors } from "@/hooks/useCategoryColors";
 import {
@@ -125,14 +125,15 @@ export function PhotoPanel({ location, onClose }: PhotoPanelProps) {
               )}
 
               <div className="pt-4 border-t">
-                <p className="text-sm font-medium">Photo URL</p>
+                <p className="text-sm font-medium mb-2">Photo</p>
                 <a 
                   href={location.photoUrl} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-xs text-primary hover:underline break-all"
+                  className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
                 >
-                  {location.photoUrl}
+                  View Image
+                  <ExternalLink className="h-4 w-4" />
                 </a>
               </div>
             </div>

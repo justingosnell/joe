@@ -1,7 +1,7 @@
 import { defineConfig } from "drizzle-kit";
 
 const databaseUrl = process.env.DATABASE_URL || "postgresql://localhost/joe";
-const isRemoteDb = databaseUrl.includes("render.com") || databaseUrl.includes("neon.tech");
+const isRemoteDb = databaseUrl.includes("render.com") || databaseUrl.includes("neon.tech") || databaseUrl.includes("supabase.co");
 
 export default defineConfig({
   out: "./migrations",

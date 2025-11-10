@@ -191,10 +191,18 @@ export function CategoryManagement() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
                     <div
-                      className="text-3xl w-12 h-12 rounded-lg flex items-center justify-center"
+                      className="text-3xl w-12 h-12 rounded-lg flex items-center justify-center overflow-hidden"
                       style={{ backgroundColor: category.color + "20" }}
                     >
-                      {category.icon}
+                      {category.icon.startsWith('http') || category.icon.startsWith('/') ? (
+                        <img
+                          src={category.icon}
+                          alt={category.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        category.icon
+                      )}
                     </div>
                     <div>
                       <CardTitle className="text-lg">{category.name}</CardTitle>

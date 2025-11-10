@@ -25,35 +25,29 @@ export default function Home() {
     },
   });
 
-  // Category collections - hardcoded
+  // Fetch categories from API
+  const { data: categories = [] } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const response = await fetch(getApiUrl("/api/categories"));
+      if (!response.ok) throw new Error("Failed to fetch categories");
+      return response.json();
+    },
+  });
+
+  // Category collections - dynamically generated from API
   const categoryCollections = useMemo(() => {
-    return [
-      {
-        title: "Muffler Men",
-        description: "Giant fiberglass figures that once advertised businesses",
-        category: "muffler-men",
-        count: locations.filter(loc => loc.category === "muffler-men").length,
-        icon: "🗿",
-        color: "#0ea5e9",
-      },
-      {
-        title: "World's Largest",
-        description: "Oversized objects claiming to be the biggest",
-        category: "worlds-largest",
-        count: locations.filter(loc => loc.category === "worlds-largest").length,
-        icon: "🏆",
-        color: "#0ea5e9",
-      },
-      {
-        title: "Unique Finds",
-        description: "One-of-a-kind oddities and curiosities",
-        category: "unique-finds",
-        count: locations.filter(loc => loc.category === "unique-finds").length,
-        icon: "✨",
-        color: "#0ea5e9",
-      },
-    ];
-  }, [locations]);
+    return categories
+      .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+      .map(category => ({
+        title: category.name,
+        description: category.description,
+        category: category.slug,
+        count: locations.filter(loc => loc.category === category.slug).length,
+        icon: category.icon,
+        color: category.color,
+      }));
+  }, [categories, locations]);
 
   // Search functionality
   const searchResults = useMemo(() => {
@@ -122,13 +116,21 @@ export default function Home() {
             {categoryCollections.map((collection) => (
               <Card
                 key={collection.category}
-                className="border shadow-md cursor-pointer group bg-card rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
+                className="border shadow-md cursor-pointer group rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
               >
-                <CardHeader className="bg-card">
+                <CardHeader>
                 </CardHeader>
-                <CardContent className="pt-6 bg-card">
-                  <div className="text-5xl mb-3 group-hover:scale-110 transition-transform">
-                    {collection.icon}
+                <CardContent className="pt-6">
+                  <div className="text-5xl mb-3 group-hover:scale-110 transition-transform flex items-center justify-center h-16">
+                    {collection.icon.startsWith('http') || collection.icon.startsWith('/') ? (
+                      <img
+                        src={collection.icon}
+                        alt={collection.title}
+                        className="w-16 h-16 object-contain"
+                      />
+                    ) : (
+                      collection.icon
+                    )}
                   </div>
                   <CardTitle className="text-xl text-foreground">
                     {collection.title}
@@ -173,9 +175,9 @@ export default function Home() {
       {/* Footer */}
       <footer className="bg-card border-t border-border text-foreground py-8 mt-12">
         <div className="container mx-auto px-4 text-center">
-          <p className="text-lg mb-2">RoadsideMapper</p>
+          <p className="text-lg mb-2">Brought to you by: Joe Bosse</p>
           <p className="text-sm text-muted-foreground">
-            Documenting America's quirky roadside attractions, one oddity at a time.
+            Documenting America's peculiar roadside attractions, one oddity at a time.
           </p>
         </div>
       </footer>

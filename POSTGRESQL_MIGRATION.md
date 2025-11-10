@@ -1,10 +1,10 @@
-# PostgreSQL Migration Guide
+# PostgreSQL Migration: Render → Supabase
 
-This guide walks you through migrating from SQLite to PostgreSQL while preserving all your data.
+This guide walks you through migrating your PostgreSQL database from Render to Supabase while preserving all your data.
 
-## Phase 1: Backup Your SQLite Data (Local)
+## Phase 1: Backup Your Current Data from Render
 
-### Step 1: Export your current data
+### Step 1: Export your data from Render PostgreSQL
 ```bash
 npx tsx export-data.ts
 ```
@@ -24,56 +24,57 @@ cat data-export.json | head -20  # Check the structure
 
 ---
 
-## Phase 2: Set Up PostgreSQL on Render
+## Phase 2: Set Up PostgreSQL on Supabase
 
-### Step 1: Create PostgreSQL database on Render
-1. Go to [render.com](https://render.com)
-2. Click "New +" → "PostgreSQL"
-3. Name it: `joe-db`
-4. Select appropriate region
-5. Choose PostgreSQL version (default is fine)
-6. Click "Create Database"
+### Step 1: Create a Supabase account
+1. Go to [supabase.com](https://supabase.com)
+2. Sign up or log in with GitHub/email
 
-### Step 2: Copy the Internal Connection String
-In the Render dashboard:
-1. Find your new database
-2. Copy the **Internal Database URL** (looks like: `postgresql://user:pass@host/dbname`)
-3. Keep this safe - you'll need it
+### Step 2: Create a new Supabase project
+1. Click "New project" in the dashboard
+2. Name it: `joe-locations` (or similar)
+3. Create a strong database password (save it!)
+4. Select your region
+5. Click "Create new project" (this takes ~2 minutes)
 
----
-
-## Phase 3: Push Code to GitHub
-
-The code changes are already made:
-- ✅ `/server/db.ts` - Now uses PostgreSQL
-- ✅ `/shared/schema.ts` - Now uses PostgreSQL table definitions
-
-### Commit and push:
-```bash
-git add -A
-git commit -m "feat: migrate from SQLite to PostgreSQL"
-git push origin main
-```
+### Step 3: Get your database connection string
+1. In Supabase dashboard, go to **Settings** → **Database**
+2. Under "Connection pooling" or "Connection string", copy the PostgreSQL connection URL
+3. It should look like: `postgresql://postgres:password@db.xxxxx.supabase.co:5432/postgres`
+4. Keep this safe - you'll need it
 
 ---
 
-## Phase 4: Import Your Data
+## Phase 3: Set Up New Database Schema on Supabase
 
-### Step 1: Set DATABASE_URL locally (testing only)
-```bash
-export DATABASE_URL="postgresql://user:password@host:5432/dbname"
-```
-*(Use the connection string from Render dashboard)*
+### Step 1: Create tables in Supabase (using Drizzle)
+Set the DATABASE_URL to your new Supabase connection string temporarily:
 
-### Step 2: Create PostgreSQL tables
 ```bash
+export DATABASE_URL="postgresql://postgres:your_password@db.xxxxx.supabase.co:5432/postgres"
 npx drizzle-kit push
 ```
 
-This creates all tables in PostgreSQL based on your schema.
+This creates all the required tables in your Supabase database.
 
-### Step 3: Import your data
+### Step 2: Verify tables were created
+In Supabase dashboard → **SQL Editor**, you should see:
+- ✅ locations
+- ✅ users
+- ✅ media
+- ✅ categories
+- ✅ settings
+- ✅ Any other tables from your schema
+
+---
+
+## Phase 4: Import Your Data to Supabase
+
+### Step 1: Import your data
+Make sure DATABASE_URL still points to Supabase:
+
 ```bash
+export DATABASE_URL="postgresql://postgres:your_password@db.xxxxx.supabase.co:5432/postgres"
 npx tsx import-data.ts
 ```
 
@@ -87,80 +88,141 @@ You should see:
 ✅ Data import completed successfully!
 ```
 
+### Step 2: Verify data in Supabase
+Go to Supabase dashboard → **Table Editor** and check:
+- Locations table has all your data
+- Photos are referenced correctly
+- Categories are populated
+
 ---
 
-## Phase 5: Deploy to Render
+## Phase 5: Update Your Application Configuration
 
-### Step 1: Update render.yaml
-The `render.yaml` already has most setup. Add DATABASE_URL environment variable:
+### Step 1: Update environment variables
 
+**For local development:**
+```bash
+# Update your .env file or export
+export DATABASE_URL="postgresql://postgres:your_password@db.xxxxx.supabase.co:5432/postgres"
+```
+
+**For Render deployment:**
 1. Go to Render dashboard
 2. Find your Joe application service
-3. Go to "Environment" tab
-4. Add new environment variable:
-   - Key: `DATABASE_URL`
-   - Value: (paste your Internal Database URL from the PostgreSQL service)
+3. Go to **Environment** tab
+4. Update the `DATABASE_URL` variable:
+   - Old value: Your Render PostgreSQL URL
+   - New value: Your Supabase PostgreSQL URL
+5. Save changes
 
-### Step 2: Redeploy
+### Step 2: Test locally
 ```bash
-git commit --allow-empty -m "trigger: redeploy with DATABASE_URL"
+npm run dev
+```
+
+Verify:
+- App starts without connection errors
+- All locations appear on the map
+- Can view location details
+- Photos load correctly
+
+### Step 3: Deploy to Render
+```bash
+git add -A
+git commit -m "feat: migrate database from Render to Supabase"
 git push origin main
 ```
 
-Or manually trigger redeployment in Render dashboard.
+The app will automatically redeploy with the new DATABASE_URL.
 
 ---
 
-## Verification Checklist
+## Phase 6: Verification Checklist
 
-After deployment:
+After deployment, verify everything works:
+
 - [ ] App loads without errors
 - [ ] All locations appear on the map
 - [ ] Can view location details
+- [ ] All photos display correctly
 - [ ] Can see all categories
-- [ ] Photos load correctly
 - [ ] Can still login (if you have user accounts)
-- [ ] Settings are preserved
+- [ ] All settings are preserved
+- [ ] Check Render logs for any database errors
 
 ---
 
 ## Troubleshooting
 
-### Import script fails with "DATABASE_URL not set"
-Make sure you've exported the DATABASE_URL:
-```bash
-export DATABASE_URL="your-connection-string"
-echo $DATABASE_URL  # Verify it's set
-```
+### "Connection refused" errors
+- Verify DATABASE_URL is correct (copy-paste from Supabase)
+- Check that you can connect from your local machine:
+  ```bash
+  psql "postgresql://postgres:password@db.xxxxx.supabase.co:5432/postgres"
+  ```
+- If it's a network issue, check Supabase network settings
 
-### "relations do not exist" errors during import
-The tables might not exist yet. Run drizzle-kit push first:
+### "relations do not exist" errors
+Tables haven't been created yet. Run:
 ```bash
+export DATABASE_URL="your-supabase-url"
 npx drizzle-kit push
 ```
 
-### Data doesn't appear after import
-Check if import completed successfully (look for ✅ messages).
-Then verify in Render dashboard that the DATABASE_URL env var is set correctly.
+### Data didn't import
+- Check that drizzle-kit push completed successfully
+- Verify DATABASE_URL is set before running import
+- Look for error messages in the import output
+- Check Supabase table editor to see if tables are empty
 
-### Connection timeout errors
-- Verify the Database URL is correct (Internal URL, not Public URL)
-- Check that your app's firewall allows connections from Render's region
-- PostgreSQL service might not be fully initialized yet (wait 2-3 minutes)
+### Old Render database still being used
+- Double-check the DATABASE_URL environment variable in Render dashboard
+- Restart the app manually in Render
+- Verify the URL has no typos
+
+### Supabase connection timeouts in production
+- Make sure you're using the correct connection pooling URL
+- Check Supabase project status (sometimes services restart)
+- Verify network connectivity between Render and Supabase
 
 ---
 
-## Keeping SQLite as Backup
+## Database Connection Best Practices for Supabase
 
-Your original SQLite data remains in `data.db` - don't delete it!
-- `data.db` - Your original SQLite database (safe to keep for reference)
-- `data-export.json` - Your data backup (safe to keep)
+### Use Connection Pooling (Recommended)
+Supabase provides a pooled connection mode that's better for serverless apps:
+1. In Supabase **Settings** → **Database** → **Connection pooling**
+2. Use this URL instead of the direct PostgreSQL URL
+3. It prevents connection exhaustion
+
+### Connection String Format
+- **Direct**: `postgresql://postgres:password@db.xxxxx.supabase.co:5432/postgres`
+- **Pooling**: `postgresql://postgres:password@db.xxxxx.supabase.co:6543/postgres` (port 6543)
+
+---
+
+## Keeping Render Database as Backup
+
+You can keep your Render PostgreSQL running as a backup:
+- Don't delete the Render PostgreSQL service immediately
+- Wait 24-48 hours to confirm Supabase is working perfectly
+- Once confident, you can delete the Render database to save costs
 
 ---
 
 ## Next Steps After Successful Migration
 
-1. Test the app thoroughly
-2. Monitor Render logs for any errors
-3. Delete SQLite if you're confident everything works
-4. Update documentation to reference PostgreSQL
+1. ✅ Test all app features thoroughly
+2. ✅ Monitor Render logs for any database errors
+3. ✅ Check Supabase monitoring dashboard for performance
+4. ✅ Delete Render PostgreSQL service (optional, to save costs)
+5. ✅ Update any documentation that references database location
+6. ✅ Consider setting up backups in Supabase dashboard
+
+---
+
+## Support Resources
+
+- [Supabase PostgreSQL Documentation](https://supabase.com/docs/guides/database)
+- [Supabase Connection Pooling](https://supabase.com/docs/guides/database/connecting-to-postgres#connection-pooling)
+- [Supabase Backups](https://supabase.com/docs/guides/platform/backups)

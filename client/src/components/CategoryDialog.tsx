@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertCategorySchema, type InsertCategory, type Category } from "@shared/schema";
@@ -21,6 +21,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { MediaLibraryPanel } from "@/components/MediaLibraryPanel";
+import { ImageIcon } from "lucide-react";
+import type { Media } from "@shared/schema";
 
 interface CategoryDialogProps {
   open: boolean;
@@ -37,6 +40,8 @@ export function CategoryDialog({
   onSubmit,
   isLoading,
 }: CategoryDialogProps) {
+  const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
+
   const form = useForm<InsertCategory>({
     resolver: zodResolver(insertCategorySchema),
     defaultValues: {
@@ -76,6 +81,11 @@ export function CategoryDialog({
 
   const handleSubmit = (data: InsertCategory) => {
     onSubmit(data);
+  };
+
+  const handleMediaSelect = (media: Media) => {
+    form.setValue("icon", media.url);
+    setMediaDialogOpen(false);
   };
 
   // Auto-generate slug from name
@@ -168,12 +178,23 @@ export function CategoryDialog({
                 name="icon"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Icon (Emoji)</FormLabel>
+                    <FormLabel>Icon</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="📍" maxLength={2} />
+                      <div className="flex gap-2">
+                        <Input {...field} placeholder="📍 or https://..." className="flex-1" />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setMediaDialogOpen(true)}
+                          title="Select from Media Library"
+                        >
+                          <ImageIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormDescription>
-                      Single emoji character
+                      Emoji character or image URL (click image icon to select from media library)
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -245,6 +266,24 @@ export function CategoryDialog({
           </form>
         </Form>
       </DialogContent>
+
+      {/* Media Library Dialog */}
+      <Dialog open={mediaDialogOpen} onOpenChange={setMediaDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Select Icon Image</DialogTitle>
+            <DialogDescription>
+              Choose an image from your media library to use as the category icon
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <MediaLibraryPanel
+              mode="select"
+              onSelect={handleMediaSelect}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
