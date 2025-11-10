@@ -4,15 +4,14 @@ import * as schema from "@shared/schema";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { resolveDatabase } from "./server/ipv4-resolver";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function importData() {
   try {
-    const databaseUrl = process.env.DATABASE_URL;
-    if (!databaseUrl) {
-      throw new Error("DATABASE_URL environment variable is not set");
-    }
+    // Resolve DATABASE_URL hostname to IPv4
+    const resolvedUrl = await resolveDatabase();
 
     // Read the export file
     const exportPath = path.resolve(__dirname, "data-export.json");
@@ -23,9 +22,9 @@ async function importData() {
     const data = JSON.parse(fs.readFileSync(exportPath, "utf-8"));
     console.log("📖 Read export file");
 
-    // Connect to PostgreSQL
-    const client = postgres(databaseUrl, {
-      ssl: "require",
+    // Connect to PostgreSQL with resolved IPv4 address
+    const client = postgres(resolvedUrl, {
+      ssl: { rejectUnauthorized: false },
     });
     const db = drizzle(client, { schema });
 

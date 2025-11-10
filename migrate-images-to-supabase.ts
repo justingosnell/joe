@@ -5,26 +5,29 @@ import { createClient } from "@supabase/supabase-js";
 import path from "path";
 import { fileURLToPath } from "url";
 import crypto from "crypto";
+import { resolveDatabase } from "./server/ipv4-resolver";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function migrateImagesToSupabase() {
+  let client: postgres.Sql | null = null;
   try {
-    const databaseUrl = process.env.DATABASE_URL;
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_KEY;
     const supabaseBucket = process.env.SUPABASE_BUCKET || "imageStore";
 
-    if (!databaseUrl) {
-      throw new Error("DATABASE_URL environment variable is not set");
-    }
     if (!supabaseUrl || !supabaseKey) {
       throw new Error("SUPABASE_URL and SUPABASE_KEY environment variables are required");
     }
 
-    // Connect to PostgreSQL
-    const client = postgres(databaseUrl, {
+    // Connect to PostgreSQL with IPv4 resolution
+    console.log("🔌 Resolving database connection...");
+    const resolvedUrl = await resolveDatabase();
+    console.log("✅ Database URL resolved");
+    
+    client = postgres(resolvedUrl, {
       ssl: "require",
+      connect_timeout: 10000,
     });
     const db = drizzle(client, { schema });
 
@@ -141,9 +144,21 @@ async function migrateImagesToSupabase() {
     console.log(`✗ Failed: ${failedCount}`);
     console.log(`\n✅ Image migration completed!`);
 
-    await client.end();
+    if (client) {
+      await client.end();
+    }
   } catch (error) {
     console.error("❌ Migration failed:", error);
+    
+    // Ensure client is closed
+    if (client) {
+      try {
+        await client.end();
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+    
     process.exit(1);
   }
 }

@@ -4,35 +4,57 @@ import * as schema from "@shared/schema";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import path from "path";
 import { fileURLToPath } from "url";
+import { resolveDatabase } from "./ipv4-resolver";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const migrationsFolder = path.resolve(__dirname, "..", "migrations");
 
-// Get database URL from environment
-const databaseUrl = process.env.DATABASE_URL;
+// Initialize database connection with IPv4 resolution
+let client: postgres.Sql | null = null;
+let _db: ReturnType<typeof drizzle> | null = null;
 
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL environment variable is not set");
+export async function initializeDatabase() {
+  if (_db) return _db;
+  
+  // Resolve DATABASE_URL hostname to IPv4 (with graceful fallback)
+  const resolvedUrl = await resolveDatabase();
+  
+  // Create connection with resolved IPv4 address
+  client = postgres(resolvedUrl, {
+    ssl: { rejectUnauthorized: false },
+    connect_timeout: 15000, // 15 second connection timeout
+  });
+  
+  _db = drizzle(client, { schema });
+  return _db;
 }
 
-// Create connection with SSL configuration and forced IPv4 for Render deployment
-// Note: DATABASE_URL should already have IPv4 address resolved by resolve-and-start.ts
-const client = postgres(databaseUrl, {
-  ssl: { rejectUnauthorized: false },
-  // Force IPv4 connection - Render has issues with IPv6
-  socket: {
-    family: 4, // 4 = IPv4, 6 = IPv6
-  },
-});
+// Export getter that initializes on first access (for backward compatibility)
+export function getDb(): ReturnType<typeof drizzle> {
+  if (!_db) {
+    throw new Error("Database not initialized. Call initializeDatabase() first.");
+  }
+  return _db;
+}
 
-// Create drizzle instance
-export const db = drizzle(client, { schema });
+// Create a lazy proxy for the db export
+export const db = new Proxy({} as any, {
+  get(target, prop) {
+    if (!_db) {
+      throw new Error("Database not initialized. Call initializeDatabase() first.");
+    }
+    return (_db as any)[prop];
+  }
+});
 
 // Run migrations if needed
 export async function runMigrations() {
   try {
+    if (!_db) {
+      throw new Error("Database not initialized");
+    }
     console.log("🔄 Running database migrations...");
-    await migrate(db, { migrationsFolder });
+    await migrate(_db, { migrationsFolder });
     console.log("✅ Migrations completed successfully");
   } catch (error) {
     console.error("❌ Migration failed:", error);

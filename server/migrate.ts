@@ -3,28 +3,87 @@ import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import path from "path";
 import { fileURLToPath } from "url";
+import { resolveDatabase } from "./ipv4-resolver";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const migrationsFolder = path.resolve(__dirname, "..", "migrations");
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL environment variable is not set");
+async function runMigrations() {
+  let client: postgres.Sql | null = null;
+  
+  try {
+    console.log("📋 Starting database migrations...");
+    
+    // Resolve DATABASE_URL hostname to IPv4 first (with graceful fallback)
+    console.log("🔌 Resolving database connection...");
+    const resolvedUrl = await resolveDatabase();
+    console.log("✅ Database URL resolved");
+    
+    // Create connection with resolved IPv4 address
+    try {
+      console.log("🔗 Creating database connection...");
+      client = postgres(resolvedUrl, { 
+        max: 1,
+        ssl: { rejectUnauthorized: false },
+        connect_timeout: 15000, // 15 second connection timeout (increased from 10s)
+        idle_timeout: 5000, // Close idle connections after 5s
+      });
+      console.log("✅ Database connection created");
+    } catch (connError) {
+      console.error("❌ Failed to create database connection:", connError);
+      throw connError;
+    }
+    
+    const db = drizzle(client);
+    
+    try {
+      console.log("📝 Running migrations...");
+      await migrate(db, { migrationsFolder });
+      console.log("✅ Migrations completed successfully");
+    } catch (migrateError) {
+      console.error("❌ Migration execution failed:", migrateError);
+      throw migrateError;
+    }
+    
+    try {
+      console.log("🔌 Closing database connection...");
+      await client.end();
+      console.log("✅ Connection closed");
+    } catch (closeError) {
+      console.error("⚠️  Error closing connection:", closeError);
+      // Don't throw, we already succeeded with migrations
+    }
+    
+  } catch (error) {
+    console.error("\n❌ MIGRATION FAILED ❌");
+    console.error("Error details:", error instanceof Error ? error.message : String(error));
+    
+    // Try to close connection if it exists
+    if (client) {
+      try {
+        await client.end();
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+    
+    process.exit(1);
+  }
 }
 
-// Note: DATABASE_URL should already have IPv4 address resolved by resolve-and-start.ts
-const sql = postgres(databaseUrl, { 
-  max: 1,
-  ssl: { rejectUnauthorized: false },
-  // Force IPv4 connection - Render has issues with IPv6
-  socket: {
-    family: 4, // 4 = IPv4, 6 = IPv6
-  },
-});
-const db = drizzle(sql);
+// Run migrations with timeout protection
+const migrationTimeout = setTimeout(() => {
+  console.error("❌ Migration timeout - process exceeded 60 seconds");
+  process.exit(1);
+}, 60000); // 60 second timeout for entire migration process
 
-console.log("Running migrations...");
-await migrate(db, { migrationsFolder });
-console.log("✓ Migrations completed successfully");
-
-await sql.end();
+runMigrations()
+  .then(() => {
+    clearTimeout(migrationTimeout);
+    console.log("\n✅ All done!\n");
+  })
+  .catch((error) => {
+    clearTimeout(migrationTimeout);
+    console.error("Unhandled error:", error);
+    process.exit(1);
+  });

@@ -4,17 +4,14 @@ import * as schema from "@shared/schema";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { resolveDatabase } from "./server/ipv4-resolver";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function mergeData() {
   try {
-    const databaseUrl = process.env.DATABASE_URL;
-    if (!databaseUrl) {
-      throw new Error("DATABASE_URL environment variable is not set");
-    }
-
-    // Note: DATABASE_URL should already have IPv4 address resolved by resolve-and-start.ts
+    // Resolve DATABASE_URL hostname to IPv4
+    const resolvedUrl = await resolveDatabase();
 
     // Read the export file (backup with all 53 locations)
     const exportPath = path.resolve(__dirname, "data-export.json");
@@ -25,8 +22,8 @@ async function mergeData() {
     const backupData = JSON.parse(fs.readFileSync(exportPath, "utf-8"));
     console.log("📖 Read backup file with", backupData.locations.length, "locations");
 
-    // Connect to PostgreSQL with SSL
-    const client = postgres(databaseUrl, {
+    // Connect to PostgreSQL with resolved IPv4 address
+    const client = postgres(resolvedUrl, {
       ssl: { rejectUnauthorized: false },
       max: 1,
     });

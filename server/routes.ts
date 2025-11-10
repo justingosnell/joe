@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { storage, ensureStorageReady } from "./storage";
-import { runMigrations } from "./db";
+import { runMigrations, initializeDatabase } from "./db";
 import { uploadFileToSupabase, getPublicUrl } from "./supabase-client";
 import bcrypt from "bcrypt";
 import { insertLocationSchema } from "@shared/schema";
@@ -74,7 +74,12 @@ function computeFileHash(buffer: Buffer): string {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Run migrations first to ensure database schema is up to date
+  // Initialize database with IPv4 resolution
+  console.log("\n🔌 Initializing database connection...");
+  await initializeDatabase();
+  console.log("✅ Database initialized\n");
+  
+  // Run migrations to ensure database schema is up to date
   await runMigrations();
   
   // Ensure storage is initialized before setting up routes
