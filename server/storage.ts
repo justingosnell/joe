@@ -377,7 +377,7 @@ export class MemStorage implements IStorage {
     if (!user) return false;
     
     const attempts = parseInt(user.failedLoginAttempts || "0", 10) + 1;
-    const isLocked = attempts >= 5;
+    const isLocked = attempts >= 10; // Increased from 5 to 10 attempts before lockout
     
     const updatedUser = {
       ...user,
@@ -877,7 +877,7 @@ export class DbStorage implements IStorage {
     if (!user) return false;
 
     const attempts = parseInt(user.failedLoginAttempts || "0", 10) + 1;
-    const isLocked = attempts >= 5;
+    const isLocked = attempts >= 10; // Increased from 5 to 10 attempts before lockout
 
     const result = await db.update(users)
       .set({
@@ -1073,25 +1073,32 @@ export async function ensureStorageReady(): Promise<void> {
   const adminUsername = process.env.INIT_ADMIN_USERNAME;
   const adminPassword = process.env.INIT_ADMIN_PASSWORD;
 
+  console.log(`📋 INIT_ADMIN_USERNAME: ${adminUsername ? "✓ Set" : "✗ Not set"}`);
+  console.log(`📋 INIT_ADMIN_PASSWORD: ${adminPassword ? "✓ Set" : "✗ Not set"}`);
+
   if (adminUsername && adminPassword) {
     try {
+      console.log(`🔍 Checking if admin user "${adminUsername}" exists...`);
       const existingAdmin = await storage.getUserByUsername(adminUsername);
       if (!existingAdmin) {
         console.log("🔐 Creating initial admin account from environment variables...");
         const bcrypt = await import("bcrypt");
         const hashedPassword = await bcrypt.default.hash(adminPassword, 10);
-        await storage.createUser({
+        const newUser = await storage.createUser({
           username: adminUsername,
           password: hashedPassword,
           role: "admin",
         });
-        console.log("✅ Initial admin account created successfully");
+        console.log(`✅ Initial admin account created successfully with ID: ${newUser.id}`);
       } else {
-        console.log("ℹ️  Admin account already exists, skipping initialization");
+        console.log(`ℹ️  Admin account "${adminUsername}" already exists (ID: ${existingAdmin.id}), skipping initialization`);
       }
     } catch (error) {
       console.error("❌ Failed to create initial admin account:", error);
+      console.error("Error details:", error instanceof Error ? error.stack : error);
       throw error;
     }
+  } else {
+    console.log("ℹ️  INIT_ADMIN_USERNAME or INIT_ADMIN_PASSWORD not set, skipping admin creation");
   }
 }

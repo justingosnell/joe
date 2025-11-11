@@ -2,6 +2,7 @@ import express, { type Express, type Request, type Response } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import helmet from "helmet";
 import { storage, ensureStorageReady } from "./storage";
 import { runMigrations, initializeDatabase } from "./db";
 import { uploadFileToSupabase, getPublicUrl } from "./supabase-client";
@@ -19,6 +20,24 @@ const __dirname = path.dirname(__filename);
 
 // Initialize MemoryStore
 const MemoryStore = createMemoryStore(session);
+
+// XSS Protection: Sanitize user input to prevent XSS attacks
+function sanitizeInput(input: string): string {
+  if (!input || typeof input !== "string") return "";
+  // Remove potentially dangerous characters and escape HTML entities
+  return input
+    .replace(/[<>\"'&]/g, (char) => {
+      const entities: Record<string, string> = {
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#x27;",
+        "&": "&amp;",
+      };
+      return entities[char] || char;
+    })
+    .trim();
+}
 
 // Extend session data type
 declare module "express-session" {
@@ -87,6 +106,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Initialize multer
   await initMulter();
+  
+  // Security: Add Helmet middleware to prevent XSS, clickjacking, and other attacks
+  // This sets various HTTP headers for security
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:", "blob:"],
+        fontSrc: ["'self'"],
+        connectSrc: ["'self'"],
+        frameSrc: ["'self'"],
+        objectSrc: ["'none'"],
+      },
+    },
+    hsts: {
+      maxAge: 31536000, // 1 year in seconds
+      includeSubDomains: true,
+    },
+    xssFilter: true,
+    noSniff: true,
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  }));
+  
   // Serve uploaded files statically
 
   // Session configuration
@@ -109,14 +153,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ============ Authentication Routes ============
   
-  // Login with security features (account lockout, failed attempt tracking)
+  // Login with security features (account lockout, failed attempt tracking, XSS protection)
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {
-      const { username, password } = req.body;
+      let { username, password } = req.body;
 
-      if (!username || !password) {
-        return res.status(400).json({ message: "Username and password are required" });
+      // Security: Validate and sanitize inputs
+      if (!username || typeof username !== "string" || username.trim().length === 0) {
+        return res.status(400).json({ message: "Valid username is required" });
       }
+      
+      if (!password || typeof password !== "string" || password.length === 0) {
+        return res.status(400).json({ message: "Password is required" });
+      }
+
+      // Sanitize username to prevent XSS attacks
+      username = sanitizeInput(username);
 
       const user = await storage.getUserByUsername(username);
       if (!user) {
@@ -124,16 +176,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      // Check if account is locked
+      // Check if account is locked (now requires 10 failed attempts instead of 5)
       if (user.isLocked === "true") {
         return res.status(403).json({
-          message: "Account is locked. Please contact an administrator.",
+          message: "Account is locked due to too many failed login attempts. Please contact an administrator.",
         });
       }
 
+      console.log(`🔐 Password comparison for user "${username}"`);
+      console.log(`   Stored hash starts with: ${user.password?.substring(0, 15)}...`);
+      console.log(`   Stored hash length: ${user.password?.length}`);
       const isValidPassword = await bcrypt.compare(password, user.password);
+      console.log(`   Password match result: ${isValidPassword}`);
       if (!isValidPassword) {
-        // Record failed login attempt
+        // Record failed login attempt (locks after 10 attempts)
         await storage.recordFailedLogin(user.id);
         return res.status(401).json({ message: "Invalid credentials" });
       }
@@ -202,8 +258,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { currentPassword, newPassword } = req.body;
 
-      if (!currentPassword || !newPassword) {
-        return res.status(400).json({ message: "Current password and new password are required" });
+      // Security: Validate passwords are required
+      if (!currentPassword || typeof currentPassword !== "string" || currentPassword.length === 0) {
+        return res.status(400).json({ message: "Current password is required" });
+      }
+      
+      if (!newPassword || typeof newPassword !== "string" || newPassword.length === 0) {
+        return res.status(400).json({ message: "New password is required" });
       }
 
       if (newPassword.length < 6) {
@@ -278,10 +339,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Forbidden: Admin access required" });
       }
 
-      const { username, password, role } = req.body;
+      let { username, password, role } = req.body;
 
-      if (!username || !password) {
-        return res.status(400).json({ message: "Username and password are required" });
+      // Security: Validate and sanitize username
+      if (!username || typeof username !== "string" || username.trim().length === 0) {
+        return res.status(400).json({ message: "Valid username is required" });
+      }
+      
+      if (!password || typeof password !== "string" || password.length === 0) {
+        return res.status(400).json({ message: "Password is required" });
       }
 
       if (password.length < 6) {
@@ -291,6 +357,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (role && !["admin", "manager"].includes(role)) {
         return res.status(400).json({ message: "Role must be either 'admin' or 'manager'" });
       }
+
+      // Sanitize username to prevent XSS attacks
+      username = sanitizeInput(username);
 
       const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {

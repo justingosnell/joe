@@ -23,12 +23,25 @@ export async function initializeDatabase() {
   try {
     console.log("🔌 Initializing database connection...");
     
-    // Create connection with IPv4 preference
-    // NOTE: For Render compatibility, ensure DATABASE_URL uses Supabase Supavisor (pooler.supabase.com)
-    // not the direct database connection (db.*.supabase.co) which defaults to IPv6
-    client = postgres(databaseUrl, {
-      ssl: { rejectUnauthorized: false },
-    });
+    // IMPORTANT: For Render (IPv4-only), use Supabase Supavisor:
+    // CONNECTION STRING FORMAT:
+    // postgresql://postgres:PASSWORD@pooler.supabase.com:6543/postgres?sslmode=require
+    // 
+    // Get this from Supabase Dashboard:
+    // 1. Go to your project settings
+    // 2. Click "Database" → "Connection Info"
+    // 3. Select "Connection pooler" (NOT "Session pooler")
+    // 4. Copy the connection string
+    // 5. Add ?sslmode=require at the end
+    
+    const options: any = {
+      ssl: true,
+      // Timeout settings for better reliability
+      idle_timeout: 20,
+      max_lifetime: 60 * 15,
+    };
+    
+    client = postgres(databaseUrl, options);
     
     _db = drizzle(client, { schema });
     console.log("✅ Database initialized");
