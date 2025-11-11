@@ -297,7 +297,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
                 {searchQuery ? "No media found matching your search" : "No media uploaded yet"}
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-4 pr-4">
                 {filteredMedia.map((media) => (
                   <Card
                     key={media.id}
