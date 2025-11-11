@@ -269,14 +269,14 @@ export function CategoryDialog({
 
       {/* Media Library Dialog */}
       <Dialog open={mediaDialogOpen} onOpenChange={setMediaDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
-          <DialogHeader>
+        <DialogContent className="max-w-5xl h-[85vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
             <DialogTitle>Select Icon Image</DialogTitle>
             <DialogDescription>
               Choose an image from your media library to use as the category icon
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto">
+          <div className="flex-1 px-6 min-h-0 overflow-hidden">
             <MediaLibraryPanel
               mode="select"
               onSelect={handleMediaSelect}

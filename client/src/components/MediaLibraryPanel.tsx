@@ -251,8 +251,8 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as "library" | "upload")} className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex flex-col h-full w-full">
+      <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as "library" | "upload")} className="flex-1 flex flex-col overflow-hidden w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="library">
             Library ({allMedia.length})
@@ -263,10 +263,10 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="library" className="flex-1 flex flex-col overflow-hidden mt-4">
+        <TabsContent value="library" className="flex-1 flex flex-col overflow-hidden p-0">
           {/* Search Bar */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="relative mb-4 shrink-0 px-4 pt-4">
+            <Search className="absolute left-7 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Search by filename, alt text, or caption..."
@@ -278,7 +278,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+                className="absolute right-5 top-1/2 transform -translate-y-1/2 h-7 w-7"
                 onClick={() => setSearchQuery("")}
               >
                 <X className="h-4 w-4" />
@@ -287,7 +287,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
           </div>
 
           {/* Media Grid */}
-          <ScrollArea className="flex-1 min-h-0">
+          <ScrollArea className="flex-1 min-h-0 px-4">
             {isLoading ? (
               <div className="text-center py-8 text-muted-foreground">
                 Loading media...
@@ -297,7 +297,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
                 {searchQuery ? "No media found matching your search" : "No media uploaded yet"}
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 pb-4 pr-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-4">
                 {filteredMedia.map((media) => (
                   <Card
                     key={media.id}
@@ -441,8 +441,8 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
           )}
         </TabsContent>
 
-        <TabsContent value="upload" className="flex-1 flex flex-col items-center justify-center mt-4">
-          <div className="w-full max-w-md space-y-4">
+        <TabsContent value="upload" className="flex-1 flex flex-col items-center justify-center overflow-y-auto">
+          <div className="w-full max-w-md space-y-4 my-4">
             <div className="border-2 border-dashed rounded-lg p-8 text-center space-y-4">
               <div className="flex justify-center">
                 <div className="p-4 bg-primary/10 rounded-full">

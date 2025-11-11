@@ -315,15 +315,15 @@ export default function Admin() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="media">
-            <Card>
-              <CardHeader>
+          <TabsContent value="media" className="h-[calc(100vh-200px)]">
+            <Card className="h-full flex flex-col">
+              <CardHeader className="shrink-0">
                 <CardTitle>Media Library</CardTitle>
                 <CardDescription>
                   Manage your uploaded images and media files
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1 min-h-0 overflow-hidden">
                 <MediaLibraryPanel mode="manage" />
               </CardContent>
             </Card>
