@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { PhotoPanel } from "@/components/PhotoPanel";
 import { useCategoryColors } from "@/hooks/useCategoryColors";
 import { getApiUrl } from "@/lib/api";
@@ -105,9 +106,6 @@ function MapController({
   const map = useMap();
 
   useEffect(() => {
-    // Invalidate size to recalculate map dimensions
-    map.invalidateSize(true);
-
     if (selectedLocation) {
       map.setView([selectedLocation.latitude, selectedLocation.longitude], 8, {
         animate: true,
@@ -117,7 +115,7 @@ function MapController({
       const bounds = L.latLngBounds(
         locations.map((loc) => [loc.latitude, loc.longitude])
       );
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 4 });
+      map.fitBounds(bounds, { padding: [50, 50] });
     }
   }, [selectedLocation, locations, map]);
 
@@ -155,7 +153,7 @@ function InteractiveMap({
     <MapContainer
       center={[39.8283, -98.5795] as [number, number]}
       zoom={4}
-      style={{ height: "100%", width: "100%" }}
+      className="h-full w-full rounded"
       zoomControl={true}
     >
       <TileLayer
@@ -266,8 +264,8 @@ export function HomeMapSection() {
 
   if (isExpanded) {
     return (
-      <div className="fixed inset-0 z-50 bg-black overflow-hidden">
-        <div className="h-screen w-screen flex flex-col">
+      <div className="fixed inset-0 z-50 bg-black">
+        <div className="h-full w-full flex flex-col">
           {/* Header */}
           <div className="bg-background border-b p-4 flex items-center justify-between">
             <div className="flex gap-4 flex-1">
@@ -391,14 +389,16 @@ export function HomeMapSection() {
       </div>
 
       {/* Map Container */}
-      <div className="border-2 border-amber-200 rounded-lg bg-white w-full" style={{ height: "384px", width: "100%", overflow: "hidden" }}>
-        <InteractiveMap
-          locations={filteredLocations}
-          selectedLocation={selectedLocation}
-          onLocationClick={setSelectedLocation}
-          terrain={terrain}
-        />
-      </div>
+      <Card className="border-2 border-amber-200 overflow-hidden">
+        <div style={{ height: "400px", width: "100%" }}>
+          <InteractiveMap
+            locations={filteredLocations}
+            selectedLocation={selectedLocation}
+            onLocationClick={setSelectedLocation}
+            terrain={terrain}
+          />
+        </div>
+      </Card>
 
       {/* Results Info */}
       <div className="mt-4 text-sm text-amber-700">
