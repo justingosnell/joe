@@ -34,14 +34,19 @@ export async function initializeDatabase() {
     // 4. Copy the connection string
     // 5. Add ?sslmode=require at the end
     
+    // Remove ?sslmode=require from URL if present, as we handle SSL via options
+    const cleanUrl = databaseUrl.replace('?sslmode=require', '');
+    
     const options: any = {
-      ssl: true,
+      ssl: process.env.NODE_ENV === 'production' ? {
+        rejectUnauthorized: false,
+      } : false,
       // Timeout settings for better reliability
       idle_timeout: 20,
       max_lifetime: 60 * 15,
     };
     
-    client = postgres(databaseUrl, options);
+    client = postgres(cleanUrl, options);
     
     _db = drizzle(client, { schema });
     console.log("✅ Database initialized");
