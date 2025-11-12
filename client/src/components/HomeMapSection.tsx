@@ -105,20 +105,19 @@ function MapController({
   const map = useMap();
 
   useEffect(() => {
-    // Ensure map is properly sized
-    setTimeout(() => {
-      map.invalidateSize();
-    }, 0);
+    // Invalidate size to recalculate map dimensions
+    map.invalidateSize(true);
 
     if (selectedLocation) {
       map.setView([selectedLocation.latitude, selectedLocation.longitude], 8, {
         animate: true,
       });
     } else if (locations.length > 0) {
+      // Fit bounds with all locations visible
       const bounds = L.latLngBounds(
         locations.map((loc) => [loc.latitude, loc.longitude])
       );
-      map.fitBounds(bounds, { padding: [50, 50] });
+      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 4 });
     }
   }, [selectedLocation, locations, map]);
 
@@ -356,7 +355,7 @@ export function HomeMapSection() {
       </div>
 
       {/* Map Container */}
-      <div className="border-2 border-amber-200 overflow-hidden h-96 rounded-lg bg-white">
+      <div className="border-2 border-amber-200 rounded-lg bg-white" style={{ height: "384px", overflow: "hidden" }}>
         <InteractiveMap
           locations={filteredLocations}
           selectedLocation={selectedLocation}
