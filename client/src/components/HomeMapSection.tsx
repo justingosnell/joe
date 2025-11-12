@@ -134,8 +134,22 @@ function InteractiveMap({
   locations,
   selectedLocation,
   onLocationClick,
-}: MapProps) {
+  terrain = "standard",
+}: MapProps & { terrain?: "standard" | "satellite" }) {
   const { getColorBySlug } = useCategoryColors();
+
+  const tileLayerConfig = {
+    standard: {
+      url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    },
+    satellite: {
+      url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      attribution: '&copy; Esri',
+    },
+  };
+
+  const config = tileLayerConfig[terrain];
 
   return (
     <MapContainer
@@ -145,8 +159,8 @@ function InteractiveMap({
       zoomControl={true}
     >
       <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url={config.url}
+        attribution={config.attribution}
       />
 
       <MapController locations={locations} selectedLocation={selectedLocation} />
@@ -183,6 +197,7 @@ function InteractiveMap({
 export function HomeMapSection() {
   const [category, setCategory] = useState("all");
   const [state, setState] = useState("all");
+  const [terrain, setTerrain] = useState<"standard" | "satellite">("standard");
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(
     null
@@ -282,6 +297,16 @@ export function HomeMapSection() {
                   ))}
                 </SelectContent>
               </Select>
+
+              <Select value={terrain} onValueChange={(val) => setTerrain(val as "standard" | "satellite")}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="satellite">Satellite</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <Button
@@ -299,6 +324,7 @@ export function HomeMapSection() {
               locations={filteredLocations}
               selectedLocation={selectedLocation}
               onLocationClick={setSelectedLocation}
+              terrain={terrain}
             />
           </div>
         </div>
@@ -344,6 +370,16 @@ export function HomeMapSection() {
           </SelectContent>
         </Select>
 
+        <Select value={terrain} onValueChange={(val) => setTerrain(val as "standard" | "satellite")}>
+          <SelectTrigger className="w-48">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="standard">Standard</SelectItem>
+            <SelectItem value="satellite">Satellite</SelectItem>
+          </SelectContent>
+        </Select>
+
         <Button
           variant="outline"
           size="icon"
@@ -360,6 +396,7 @@ export function HomeMapSection() {
           locations={filteredLocations}
           selectedLocation={selectedLocation}
           onLocationClick={setSelectedLocation}
+          terrain={terrain}
         />
       </div>
 
