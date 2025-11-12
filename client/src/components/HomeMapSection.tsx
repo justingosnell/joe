@@ -266,8 +266,8 @@ export function HomeMapSection() {
 
   if (isExpanded) {
     return (
-      <div className="fixed inset-0 z-50 bg-black">
-        <div className="h-full w-full flex flex-col">
+      <div className="fixed inset-0 z-50 bg-black overflow-hidden">
+        <div className="h-screen w-screen flex flex-col">
           {/* Header */}
           <div className="bg-background border-b p-4 flex items-center justify-between">
             <div className="flex gap-4 flex-1">
@@ -391,7 +391,7 @@ export function HomeMapSection() {
       </div>
 
       {/* Map Container */}
-      <div className="border-2 border-amber-200 rounded-lg bg-white" style={{ height: "384px", overflow: "hidden" }}>
+      <div className="border-2 border-amber-200 rounded-lg bg-white w-full" style={{ height: "384px", width: "100%", overflow: "hidden" }}>
         <InteractiveMap
           locations={filteredLocations}
           selectedLocation={selectedLocation}
