@@ -352,14 +352,12 @@ export function HomeMapSection() {
       </div>
 
       {/* Map Container */}
-      <Card className="border-2 border-amber-200 overflow-hidden">
-        <div style={{ height: "400px", width: "100%", position: "relative" }}>
-          <InteractiveMap
-            locations={filteredLocations}
-            selectedLocation={selectedLocation}
-            onLocationClick={setSelectedLocation}
-          />
-        </div>
+      <Card className="border-2 border-amber-200 overflow-hidden h-96">
+        <InteractiveMap
+          locations={filteredLocations}
+          selectedLocation={selectedLocation}
+          onLocationClick={setSelectedLocation}
+        />
       </Card>
 
       {/* Results Info */}
