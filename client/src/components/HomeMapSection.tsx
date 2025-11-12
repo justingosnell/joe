@@ -1,9 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Maximize2, Minimize2, MapIcon } from "lucide-react";
-import { getApiUrl } from "@/lib/api";
 import {
   Select,
   SelectContent,
@@ -15,30 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PhotoPanel } from "@/components/PhotoPanel";
 import { useCategoryColors } from "@/hooks/useCategoryColors";
+import { getApiUrl } from "@/lib/api";
 import type { Location } from "@shared/schema";
-
-const mapLayers = [
-  {
-    id: "standard",
-    label: "Standard",
-    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  },
-  {
-    id: "satellite",
-    label: "Satellite",
-    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    attribution: "&copy; Esri",
-  },
-  {
-    id: "terrain",
-    label: "Terrain",
-    url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
-    attribution:
-      '&copy; <a href="https://opentopomap.org/copyright">OpenTopoMap</a>',
-  },
-];
 
 const STATE_NAMES: Record<string, string> = {
   AL: "Alabama",
@@ -128,52 +105,45 @@ function MapController({
 }) {
   const map = useMap();
 
-  const handleResetView = () => {
-    if (locations.length > 0) {
+  useEffect(() => {
+    if (selectedLocation) {
+      map.setView([selectedLocation.latitude, selectedLocation.longitude], 8, {
+        animate: true,
+      });
+    } else if (locations.length > 0) {
       const bounds = L.latLngBounds(
         locations.map((loc) => [loc.latitude, loc.longitude])
       );
       map.fitBounds(bounds, { padding: [50, 50] });
     }
-  };
+  }, [selectedLocation, locations, map]);
 
-  return (
-    <button
-      onClick={handleResetView}
-      className="absolute bottom-4 left-4 z-[400] bg-white p-2 rounded shadow-md hover:shadow-lg transition-shadow"
-      title="Fit to bounds"
-    >
-      <MapIcon className="h-4 w-4" />
-    </button>
-  );
+  return null;
 }
 
 interface MapProps {
   locations: Location[];
   selectedLocation: Location | null;
   onLocationClick: (location: Location | null) => void;
-  mapLayerId: string;
 }
 
 function InteractiveMap({
   locations,
   selectedLocation,
   onLocationClick,
-  mapLayerId,
 }: MapProps) {
-  const currentLayer = mapLayers.find((l) => l.id === mapLayerId) || mapLayers[0];
   const { getColorBySlug } = useCategoryColors();
 
   return (
     <MapContainer
       center={[39.8283, -98.5795] as [number, number]}
       zoom={4}
-      className="h-full w-full rounded"
+      className="h-full w-full"
       zoomControl={true}
     >
       <TileLayer
-        url={currentLayer.url}
-        attribution={currentLayer.attribution}
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
 
       <MapController locations={locations} selectedLocation={selectedLocation} />
@@ -210,7 +180,6 @@ function InteractiveMap({
 export function HomeMapSection() {
   const [category, setCategory] = useState("all");
   const [state, setState] = useState("all");
-  const [mapLayer, setMapLayer] = useState("standard");
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(
     null
@@ -265,16 +234,14 @@ export function HomeMapSection() {
   }, [locations, category, state]);
 
   const states = useMemo(
-    () => Array.from(new Set(locations.map((l) => l.state).filter(Boolean))).sort(),
+    () => Array.from(new Set(locations.map((l) => l.state))).sort(),
     [locations]
   );
 
   const categories = useMemo(
     () => [
       { id: "all", label: "All Categories" },
-      ...apiCategories
-        .filter((cat) => cat.slug) // Filter out categories with empty slugs
-        .map((cat) => ({ id: cat.slug, label: cat.name })),
+      ...apiCategories.map((cat) => ({ id: cat.slug, label: cat.name })),
     ],
     [apiCategories]
   );
@@ -312,19 +279,6 @@ export function HomeMapSection() {
                   ))}
                 </SelectContent>
               </Select>
-
-              <Select value={mapLayer} onValueChange={setMapLayer}>
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {mapLayers.map((layer) => (
-                    <SelectItem key={layer.id} value={layer.id}>
-                      {layer.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             <Button
@@ -342,7 +296,6 @@ export function HomeMapSection() {
               locations={filteredLocations}
               selectedLocation={selectedLocation}
               onLocationClick={setSelectedLocation}
-              mapLayerId={mapLayer}
             />
           </div>
         </div>
@@ -353,7 +306,7 @@ export function HomeMapSection() {
   return (
     <section className="mb-12">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-3xl font-bold text-white flex items-center gap-2">
+        <h2 className="text-3xl font-bold text-amber-900 flex items-center gap-2">
           <MapIcon className="h-7 w-7 text-orange-500" />
           Interactive Map
         </h2>
@@ -388,19 +341,6 @@ export function HomeMapSection() {
           </SelectContent>
         </Select>
 
-        <Select value={mapLayer} onValueChange={setMapLayer}>
-          <SelectTrigger className="w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {mapLayers.map((layer) => (
-              <SelectItem key={layer.id} value={layer.id}>
-                {layer.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
         <Button
           variant="outline"
           size="icon"
@@ -413,12 +353,11 @@ export function HomeMapSection() {
 
       {/* Map Container */}
       <Card className="border-2 border-amber-200 overflow-hidden">
-        <div style={{ height: "400px", width: "100%" }}>
+        <div style={{ height: "400px", width: "100%", position: "relative" }}>
           <InteractiveMap
             locations={filteredLocations}
             selectedLocation={selectedLocation}
             onLocationClick={setSelectedLocation}
-            mapLayerId={mapLayer}
           />
         </div>
       </Card>
