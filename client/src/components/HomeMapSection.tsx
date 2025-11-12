@@ -105,6 +105,11 @@ function MapController({
   const map = useMap();
 
   useEffect(() => {
+    // Ensure map is properly sized
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 0);
+
     if (selectedLocation) {
       map.setView([selectedLocation.latitude, selectedLocation.longitude], 8, {
         animate: true,
@@ -137,7 +142,7 @@ function InteractiveMap({
     <MapContainer
       center={[39.8283, -98.5795] as [number, number]}
       zoom={4}
-      className="h-full w-full"
+      style={{ height: "100%", width: "100%" }}
       zoomControl={true}
     >
       <TileLayer
