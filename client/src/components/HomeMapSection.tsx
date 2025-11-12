@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { PhotoPanel } from "@/components/PhotoPanel";
 import { useCategoryColors } from "@/hooks/useCategoryColors";
 import { getApiUrl } from "@/lib/api";
@@ -352,13 +351,13 @@ export function HomeMapSection() {
       </div>
 
       {/* Map Container */}
-      <Card className="border-2 border-amber-200 overflow-hidden h-96">
+      <div className="border-2 border-amber-200 overflow-hidden h-96 rounded-lg bg-white">
         <InteractiveMap
           locations={filteredLocations}
           selectedLocation={selectedLocation}
           onLocationClick={setSelectedLocation}
         />
-      </Card>
+      </div>
 
       {/* Results Info */}
       <div className="mt-4 text-sm text-amber-700">
