@@ -841,6 +841,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Recover media from Supabase storage (admin only)
+  app.post("/api/admin/recover-supabase-media", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { supabase } = await import("./supabase-client");
+      const { getPublicUrl } = await import("./supabase-client");
+
+      const bucket = process.env.SUPABASE_BUCKET;
+      if (!bucket) {
+        return res.status(400).json({ message: "SUPABASE_BUCKET not configured" });
+      }
+
+      // List all files in Supabase bucket
+      const { data: files, error } = await supabase.storage.from(bucket).list();
+
+      if (error) {
+        console.error("Error listing Supabase files:", error);
+        return res.status(500).json({ message: "Failed to list Supabase files" });
+      }
+
+      console.log(`📁 Found ${files.length} files in Supabase bucket`);
+
+      // Get all existing media records from database
+      const existingMedia = await storage.getAllMedia();
+      const existingUrls = new Set(existingMedia.map((m) => m.url));
+
+      console.log(`💾 Found ${existingMedia.length} media records in database`);
+
+      // Filter files that aren't in the database
+      const newFiles = files.filter((file) => {
+        const fileUrl = getPublicUrl(bucket, file.name);
+        return !existingUrls.has(fileUrl);
+      });
+
+      if (newFiles.length === 0) {
+        return res.json({
+          message: "All Supabase files are already in database",
+          addedCount: 0,
+          totalCount: existingMedia.length,
+        });
+      }
+
+      console.log(`🆕 Found ${newFiles.length} new files to add`);
+
+      // Add new files to database
+      let addedCount = 0;
+      for (const file of newFiles) {
+        try {
+          const fileUrl = getPublicUrl(bucket, file.name);
+          const mimeType = getMimeType(file.name);
+          await storage.createMedia({
+            filename: file.name,
+            originalName: file.name,
+            url: fileUrl,
+            mimeType,
+            size: String(file.metadata?.size || 0),
+            alt: "",
+            caption: "",
+          });
+          addedCount++;
+          console.log(`✅ Added: ${file.name}`);
+        } catch (err) {
+          console.error(`❌ Failed to add ${file.name}:`, err);
+        }
+      }
+
+      console.log(`✨ Recovery complete! Added ${addedCount} media entries`);
+
+      res.json({
+        message: `Recovery complete! Added ${addedCount} media entries`,
+        addedCount,
+        totalCount: existingMedia.length + addedCount,
+      });
+    } catch (error) {
+      console.error("❌ Recovery error:", error);
+      const errorMsg = error instanceof Error ? error.message : "Recovery failed";
+      res.status(500).json({ message: errorMsg });
+    }
+  });
+
+  // Helper function to get MIME type
+  function getMimeType(filename: string): string {
+    const ext = filename.toLowerCase().split(".").pop();
+    const mimeTypes: Record<string, string> = {
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      png: "image/png",
+      gif: "image/gif",
+      webp: "image/webp",
+    };
+    return mimeTypes[ext || ""] || "application/octet-stream";
+  }
+
   // Fix broken location photo URLs (admin only)
   app.post("/api/admin/fix-location-urls", requireAuth, async (req: Request, res: Response) => {
     try {
