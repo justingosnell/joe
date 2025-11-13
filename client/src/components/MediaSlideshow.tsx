@@ -107,8 +107,8 @@ export function MediaSlideshow() {
       </Button>
 
       {/* Dot Indicators */}
-      <div className="absolute bottom-3 md:bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 md:gap-2">
-        {images.slice(0, 10).map((_, index) => (
+      <div className="absolute bottom-3 md:bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 md:gap-2 overflow-x-auto max-w-xs">
+        {images.map((_, index) => (
           <button
             key={index}
             onClick={() => goToSlide(index)}

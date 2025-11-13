@@ -494,9 +494,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ============ Media Library Routes (Admin Only) ============
+  // ============ Media Library Routes ============
   
-  // Get all media
+  // Get all media (public endpoint for slideshows)
+  app.get("/api/media/public/list", async (req: Request, res: Response) => {
+    try {
+      const media = await storage.getAllMedia();
+      res.json(media);
+    } catch (error) {
+      console.error("Get public media error:", error);
+      res.status(500).json({ message: "Failed to fetch media" });
+    }
+  });
+
+  // Get all media (admin endpoint)
   app.get("/api/media", requireAuth, async (req: Request, res: Response) => {
     try {
       const media = await storage.getAllMedia();

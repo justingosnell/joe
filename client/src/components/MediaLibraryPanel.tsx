@@ -251,8 +251,8 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
   };
 
   return (
-    <div className="flex flex-col h-full w-full">
-      <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as "library" | "upload")} className="flex-1 flex flex-col overflow-hidden w-full">
+    <div className="flex flex-col h-full w-full overflow-hidden">
+      <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as "library" | "upload")} className="flex-1 flex flex-col overflow-hidden w-full h-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="library">
             Library ({allMedia.length})
@@ -263,7 +263,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="library" className="flex-1 flex flex-col overflow-hidden p-0">
+        <TabsContent value="library" className="flex-1 flex flex-col overflow-hidden p-0 min-h-0">
           {/* Search Bar */}
           <div className="relative mb-4 shrink-0 px-4 pt-4">
             <Search className="absolute left-7 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -287,18 +287,19 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
           </div>
 
           {/* Media Grid */}
-          <ScrollArea className="flex-1 min-h-0 px-4">
-            {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Loading media...
-              </div>
-            ) : filteredMedia.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                {searchQuery ? "No media found matching your search" : "No media uploaded yet"}
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-4 pr-4">
-                {filteredMedia.map((media) => (
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ScrollArea className="h-full w-full px-4">
+              {isLoading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Loading media...
+                </div>
+              ) : filteredMedia.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  {searchQuery ? "No media found matching your search" : "No media uploaded yet"}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-4 pr-4">
+                  {filteredMedia.map((media) => (
                   <Card
                     key={media.id}
                     className={`group relative overflow-hidden cursor-pointer transition-all hover:ring-2 hover:ring-primary ${
@@ -380,9 +381,10 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
                     </div>
                   </Card>
                 ))}
-              </div>
-            )}
-          </ScrollArea>
+                </div>
+              )}
+            </ScrollArea>
+          </div>
 
           {/* Edit Panel */}
           {editingMedia && mode === "manage" && (
