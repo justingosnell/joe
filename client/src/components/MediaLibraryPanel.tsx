@@ -7,7 +7,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, X, Search, Trash2, Edit2, Check } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getApiUrl } from "@/lib/api";
 import type { Media } from "@shared/schema";
@@ -287,8 +286,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
           </div>
 
           {/* Media Grid */}
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <ScrollArea className="h-full w-full px-4">
+          <div className="flex-1 min-h-0 overflow-y-auto px-4">
               {isLoading ? (
                 <div className="text-center py-8 text-muted-foreground">
                   Loading media...
@@ -298,7 +296,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
                   {searchQuery ? "No media found matching your search" : "No media uploaded yet"}
                 </div>
               ) : (
-                <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-4 pr-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-4">
                   {filteredMedia.map((media) => (
                   <Card
                     key={media.id}
@@ -383,7 +381,6 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
                 ))}
                 </div>
               )}
-            </ScrollArea>
           </div>
 
           {/* Edit Panel */}
