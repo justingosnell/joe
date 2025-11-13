@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, X, Search, Trash2, Edit2, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getApiUrl } from "@/lib/api";
 import type { Media } from "@shared/schema";
 
@@ -263,30 +265,19 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
   };
 
   return (
-    <div className="w-full h-auto">
-      <div className="flex gap-2 border-b mb-6 px-4">
-        <Button
-          variant={selectedTab === "library" ? "default" : "ghost"}
-          onClick={() => setSelectedTab("library")}
-          className="rounded-none border-b-2"
-        >
-          Library ({allMedia.length})
-        </Button>
-        <Button
-          variant={selectedTab === "upload" ? "default" : "ghost"}
-          onClick={() => setSelectedTab("upload")}
-          className="rounded-none border-b-2"
-        >
-          <Upload className="mr-2 h-4 w-4" />
-          Upload New
-        </Button>
-      </div>
+    <Card className="w-full h-[600px] flex flex-col p-0">
+      <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as "library" | "upload")} className="flex-1 flex flex-col overflow-hidden p-6 pb-0">
+        <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsTrigger value="library">Library ({allMedia.length})</TabsTrigger>
+          <TabsTrigger value="upload">
+            <Upload className="mr-2 h-4 w-4" />
+            Upload New
+          </TabsTrigger>
+        </TabsList>
 
-      {selectedTab === "library" && (
-        <div className="w-full h-auto">
-          {/* Search Bar */}
-          <div className="relative mb-4 shrink-0 px-4">
-            <Search className="absolute left-7 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <TabsContent value="library" className="flex-1 flex flex-col overflow-hidden mt-0 mb-0">
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
               placeholder="Search by filename, alt text, or caption..."
@@ -298,7 +289,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-5 top-1/2 transform -translate-y-1/2 h-7 w-7"
+                className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
                 onClick={() => handleSearch("")}
               >
                 <X className="h-4 w-4" />
@@ -306,20 +297,16 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
             )}
           </div>
 
-          {/* Media Grid */}
-          <div className="w-full h-auto px-4">
-              {isLoading ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Loading media...
-                </div>
-              ) : filteredMedia.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  {searchQuery ? "No media found matching your search" : "No media uploaded yet"}
-                </div>
-              ) : (
-                <>
-                <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-4">
-                  {paginatedMedia.map((media) => (
+          <ScrollArea className="flex-1 h-[400px]">
+            {isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">Loading media...</div>
+            ) : filteredMedia.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                {searchQuery ? "No media found matching your search" : "No media uploaded yet"}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 pb-4 pr-4">
+                {paginatedMedia.map((media) => (
                   <Card
                     key={media.id}
                     className={`group relative overflow-hidden cursor-pointer transition-all hover:ring-2 hover:ring-primary ${
@@ -334,15 +321,10 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
                         className="w-full h-full object-cover"
                         loading="lazy"
                       />
-                      
-                      {/* Overlay with actions */}
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                         {mode === "select" ? (
                           <>
-                            <Button
-                              size="sm"
-                              onClick={() => handleSelect(media)}
-                            >
+                            <Button size="sm" onClick={() => handleSelect(media)}>
                               <Check className="mr-2 h-4 w-4" />
                               Select
                             </Button>
@@ -383,164 +365,96 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
                         )}
                       </div>
                     </div>
-                    
-                    {/* Media Info */}
                     <div className="p-2 space-y-1">
                       <p className="text-xs font-medium truncate" title={media.originalName || media.filename}>
                         {media.originalName || media.filename}
                       </p>
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>{formatFileSize(media.size)}</span>
-                        {media.width && media.height && (
-                          <span>{media.width}×{media.height}</span>
-                        )}
+                        {media.width && media.height && <span>{media.width}×{media.height}</span>}
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(media.uploadedAt)}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{formatDate(media.uploadedAt)}</p>
                     </div>
                   </Card>
                 ))}
-                </div>
+              </div>
+            )}
+          </ScrollArea>
 
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-1 py-6 px-4 flex-wrap">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
-                      className="h-8 w-8"
-                    >
-                      <ChevronLeft className="h-3 w-3" />
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-1 py-3 mt-2 flex-wrap">
+              <Button variant="outline" size="icon" onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="h-8 w-8">
+                <ChevronLeft className="h-3 w-3" />
+              </Button>
+              <div className="flex items-center gap-1">
+                {totalPages <= 7 ? (
+                  Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <Button key={page} variant={currentPage === page ? "default" : "outline"} size="sm" onClick={() => setCurrentPage(page)} className="h-8 w-8 text-xs">
+                      {page}
                     </Button>
-                    <div className="flex items-center gap-1">
-                      {totalPages <= 7 ? (
-                        Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                          <Button
-                            key={page}
-                            variant={currentPage === page ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setCurrentPage(page)}
-                            className="h-8 w-8 text-xs"
-                          >
-                            {page}
-                          </Button>
-                        ))
-                      ) : (
-                        <>
-                          <Button
-                            variant={currentPage === 1 ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setCurrentPage(1)}
-                            className="h-8 w-8 text-xs"
-                          >
-                            1
-                          </Button>
-                          {currentPage > 3 && <span className="text-xs px-1">...</span>}
-                          {Array.from({ length: Math.min(3, totalPages - 2) }, (_, i) => {
-                            const page = Math.max(2, currentPage - 1) + i;
-                            if (page < totalPages) return page;
-                            return null;
-                          }).filter(Boolean).map(page => (
-                            <Button
-                              key={page}
-                              variant={currentPage === page ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setCurrentPage(page as number)}
-                              className="h-8 w-8 text-xs"
-                            >
-                              {page}
-                            </Button>
-                          ))}
-                          {currentPage < totalPages - 2 && <span className="text-xs px-1">...</span>}
-                          <Button
-                            variant={currentPage === totalPages ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setCurrentPage(totalPages)}
-                            className="h-8 w-8 text-xs"
-                          >
-                            {totalPages}
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages}
-                      className="h-8 w-8"
-                    >
-                      <ChevronRight className="h-3 w-3" />
+                  ))
+                ) : (
+                  <>
+                    <Button variant={currentPage === 1 ? "default" : "outline"} size="sm" onClick={() => setCurrentPage(1)} className="h-8 w-8 text-xs">
+                      1
                     </Button>
-                  </div>
+                    {currentPage > 3 && <span className="text-xs px-1">...</span>}
+                    {Array.from({ length: Math.min(3, totalPages - 2) }, (_, i) => {
+                      const page = Math.max(2, currentPage - 1) + i;
+                      if (page < totalPages) return page;
+                      return null;
+                    })
+                      .filter(Boolean)
+                      .map(page => (
+                        <Button key={page} variant={currentPage === page ? "default" : "outline"} size="sm" onClick={() => setCurrentPage(page as number)} className="h-8 w-8 text-xs">
+                          {page}
+                        </Button>
+                      ))}
+                    {currentPage < totalPages - 2 && <span className="text-xs px-1">...</span>}
+                    <Button variant={currentPage === totalPages ? "default" : "outline"} size="sm" onClick={() => setCurrentPage(totalPages)} className="h-8 w-8 text-xs">
+                      {totalPages}
+                    </Button>
+                  </>
                 )}
-                </>
-              )}
-          </div>
+              </div>
+              <Button variant="outline" size="icon" onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="h-8 w-8">
+                <ChevronRight className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
 
-          {/* Edit Panel */}
           {editingMedia && mode === "manage" && (
-            <Card className="mt-4 p-4">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold">Edit Media Details</h3>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setEditingMedia(null)}
-                  >
-                    <X className="h-4 w-4" />
+            <div className="mt-4 p-4 bg-muted rounded border">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold">Edit Media Details</h3>
+                <Button variant="ghost" size="icon" onClick={() => setEditingMedia(null)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-alt" className="text-sm">Alt Text</Label>
+                  <Input id="edit-alt" value={editAlt} onChange={(e) => setEditAlt(e.target.value)} placeholder="Describe the image" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-caption" className="text-sm">Caption</Label>
+                  <Textarea id="edit-caption" value={editCaption} onChange={(e) => setEditCaption(e.target.value)} placeholder="Add a caption" rows={2} />
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleSaveEdit} disabled={updateMutation.isPending} size="sm">
+                    {updateMutation.isPending ? "Saving..." : "Save"}
+                  </Button>
+                  <Button variant="outline" onClick={() => setEditingMedia(null)} size="sm">
+                    Cancel
                   </Button>
                 </div>
-                
-                <div className="grid gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-alt">Alt Text</Label>
-                    <Input
-                      id="edit-alt"
-                      value={editAlt}
-                      onChange={(e) => setEditAlt(e.target.value)}
-                      placeholder="Describe the image for accessibility"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-caption">Caption</Label>
-                    <Textarea
-                      id="edit-caption"
-                      value={editCaption}
-                      onChange={(e) => setEditCaption(e.target.value)}
-                      placeholder="Add a caption for the image"
-                      rows={3}
-                    />
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleSaveEdit}
-                      disabled={updateMutation.isPending}
-                    >
-                      {updateMutation.isPending ? "Saving..." : "Save Changes"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => setEditingMedia(null)}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
               </div>
-            </Card>
+            </div>
           )}
-        </div>
-      )}
+        </TabsContent>
 
-      {selectedTab === "upload" && (
-        <div className="flex flex-col items-center justify-center p-4">
-          <div className="w-full max-w-md space-y-4 my-4">
+        <TabsContent value="upload" className="flex-1 flex flex-col items-center justify-center overflow-hidden mt-0 mb-0">
+          <div className="w-full max-w-md space-y-4">
             <div className="border-2 border-dashed rounded-lg p-8 text-center space-y-4">
               <div className="flex justify-center">
                 <div className="p-4 bg-primary/10 rounded-full">
@@ -549,9 +463,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
               </div>
               <div>
                 <h3 className="font-semibold mb-2">Upload Images</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Select one or multiple image files to upload
-                </p>
+                <p className="text-sm text-muted-foreground mb-4">Select one or multiple image files to upload</p>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -561,24 +473,15 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
                   disabled={uploading}
                   multiple
                 />
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
-                >
-                  {uploading ? (
-                    uploadProgress.total > 0 
-                      ? `Uploading ${uploadProgress.current}/${uploadProgress.total}...` 
-                      : "Uploading..."
-                  ) : "Select Images"}
+                <Button onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                  {uploading ? (uploadProgress.total > 0 ? `Uploading ${uploadProgress.current}/${uploadProgress.total}...` : "Uploading...") : "Select Images"}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Supported formats: JPEG, PNG, GIF, WebP (max 10MB per file)
-              </p>
+              <p className="text-xs text-muted-foreground">Supported formats: JPEG, PNG, GIF, WebP (max 10MB per file)</p>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        </TabsContent>
+      </Tabs>
+    </Card>
   );
 }
