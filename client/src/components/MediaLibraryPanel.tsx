@@ -286,7 +286,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
           </div>
 
           {/* Media Grid */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-4">
+          <div className="flex-1 min-h-0 w-full overflow-y-auto">
               {isLoading ? (
                 <div className="text-center py-8 text-muted-foreground">
                   Loading media...
@@ -296,7 +296,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
                   {searchQuery ? "No media found matching your search" : "No media uploaded yet"}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-4">
+                <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-4 px-4">
                   {filteredMedia.map((media) => (
                   <Card
                     key={media.id}
