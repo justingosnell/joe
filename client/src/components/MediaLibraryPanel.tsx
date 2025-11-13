@@ -262,7 +262,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="library" className="flex-1 flex flex-col overflow-hidden p-0 min-h-0">
+        <TabsContent value="library" className="flex-1 flex flex-col p-0 min-h-0">
           {/* Search Bar */}
           <div className="relative mb-4 shrink-0 px-4 pt-4">
             <Search className="absolute left-7 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
