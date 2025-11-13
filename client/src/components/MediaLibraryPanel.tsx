@@ -252,7 +252,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
 
   return (
     <div className="flex flex-col h-full w-full overflow-hidden">
-      <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as "library" | "upload")} className="flex-1 flex flex-col overflow-hidden w-full h-full">
+      <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as "library" | "upload")} className="flex-1 flex flex-col overflow-hidden w-full min-h-0">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="library">
             Library ({allMedia.length})
@@ -298,7 +298,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
                   {searchQuery ? "No media found matching your search" : "No media uploaded yet"}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-4 pr-4">
+                <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-4 pr-4">
                   {filteredMedia.map((media) => (
                   <Card
                     key={media.id}

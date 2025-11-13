@@ -323,7 +323,7 @@ export default function Admin() {
                   Manage your uploaded images and media files
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex-1 min-h-0 overflow-hidden">
+              <CardContent className="flex-1 min-h-0 overflow-hidden flex flex-col">
                 <MediaLibraryPanel mode="manage" />
               </CardContent>
             </Card>

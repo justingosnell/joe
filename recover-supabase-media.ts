@@ -1,6 +1,5 @@
-import { initializeDatabase } from "./server/db";
+import { initializeDatabase, db } from "./server/db";
 import { media } from "@shared/schema";
-import { db } from "drizzle-orm/postgres-js";
 import { supabase, getPublicUrl } from "./server/supabase-client";
 
 async function recoverSupabaseMedia() {
