@@ -4,13 +4,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/api";
 import { LogOut, Plus, MapPin, Search, X, Image as ImageIcon, Upload, FileUp, FolderTree, Home } from "lucide-react";
 import { LocationTable } from "@/components/LocationTable";
 import { LocationDialog } from "@/components/LocationDialog";
-import { MediaLibrary } from "@/components/MediaLibrary";
 import { MediaLibraryPanel } from "@/components/MediaLibraryPanel";
 import { LogoSelectorDialog } from "@/components/LogoSelectorDialog";
 import { BulkUploadDialog } from "@/components/BulkUploadDialog";
@@ -30,6 +28,7 @@ export default function Admin() {
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [selectedTab, setSelectedTab] = useState<"locations" | "categories" | "media">("locations");
 
   // Fetch locations
   const { data: allLocations = [], isLoading } = useQuery<Location[]>({
@@ -182,7 +181,7 @@ export default function Admin() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="w-full h-auto bg-background">
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
@@ -219,24 +218,49 @@ export default function Admin() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-4 sm:py-8">
-        <Tabs defaultValue="locations" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-4">
-            <TabsTrigger value="locations">
-              <MapPin className="mr-2 h-4 w-4" />
+      <main className="w-full h-auto">
+        {/* Tabs Header */}
+        <div className="container mx-auto px-4 py-4 sm:py-8 border-b">
+          <div className="flex gap-4">
+            <button
+              onClick={() => setSelectedTab("locations")}
+              className={`pb-2 px-2 font-medium transition-colors ${
+                selectedTab === "locations"
+                  ? "border-b-2 border-primary text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <MapPin className="inline mr-2 h-4 w-4" />
               Locations
-            </TabsTrigger>
-            <TabsTrigger value="categories">
-              <FolderTree className="mr-2 h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setSelectedTab("categories")}
+              className={`pb-2 px-2 font-medium transition-colors ${
+                selectedTab === "categories"
+                  ? "border-b-2 border-primary text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <FolderTree className="inline mr-2 h-4 w-4" />
               Categories
-            </TabsTrigger>
-            <TabsTrigger value="media">
-              <ImageIcon className="mr-2 h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setSelectedTab("media")}
+              className={`pb-2 px-2 font-medium transition-colors ${
+                selectedTab === "media"
+                  ? "border-b-2 border-primary text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <ImageIcon className="inline mr-2 h-4 w-4" />
               Media Library
-            </TabsTrigger>
-          </TabsList>
+            </button>
+          </div>
+        </div>
 
-          <TabsContent value="locations">
+        {/* Content */}
+        {selectedTab === "locations" && (
+          <div className="container mx-auto px-4 py-4 sm:py-8">
             <Card>
               <CardHeader>
                 <div className="flex flex-col gap-4">
@@ -305,30 +329,32 @@ export default function Admin() {
             )}
           </CardContent>
         </Card>
-          </TabsContent>
+          </div>
+        )}
 
-          <TabsContent value="categories">
+        {selectedTab === "categories" && (
+          <div className="container mx-auto px-4 py-4 sm:py-8">
             <Card>
               <CardContent className="pt-6">
                 <CategoryManagement />
               </CardContent>
             </Card>
-          </TabsContent>
+          </div>
+        )}
 
-          <TabsContent value="media" className="h-[calc(100vh-200px)]">
-            <Card className="h-full flex flex-col">
-              <CardHeader className="shrink-0">
-                <CardTitle>Media Library</CardTitle>
-                <CardDescription>
+        {selectedTab === "media" && (
+          <div className="w-full h-auto">
+            <div className="px-4 py-4 sm:py-8">
+              <div className="mb-4">
+                <h2 className="text-2xl font-bold">Media Library</h2>
+                <p className="text-sm text-muted-foreground">
                   Manage your uploaded images and media files
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1 min-h-0 overflow-hidden flex flex-col">
-                <MediaLibraryPanel mode="manage" />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                </p>
+              </div>
+            </div>
+            <MediaLibraryPanel mode="manage" />
+          </div>
+        )}
       </main>
 
       {/* Location Dialog */}
