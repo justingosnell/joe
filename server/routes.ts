@@ -6,6 +6,7 @@ import helmet from "helmet";
 import { storage, ensureStorageReady } from "./storage";
 import { runMigrations, initializeDatabase } from "./db";
 import { uploadFileToSupabase, getPublicUrl } from "./supabase-client";
+import { geocodeLocation } from "./geocoding";
 import bcrypt from "bcrypt";
 import { insertLocationSchema } from "@shared/schema";
 import { z } from "zod";
@@ -947,6 +948,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/locations", requireAuth, async (req: Request, res: Response) => {
     try {
       const validatedData = insertLocationSchema.parse(req.body);
+      
+      // Auto-geocode if coordinates are missing (0,0)
+      if ((validatedData.latitude === 0 || validatedData.latitude === undefined) && 
+          (validatedData.longitude === 0 || validatedData.longitude === undefined)) {
+        const geocoded = await geocodeLocation(validatedData.city, validatedData.state);
+        if (geocoded) {
+          validatedData.latitude = geocoded.latitude;
+          validatedData.longitude = geocoded.longitude;
+          console.log(`✅ Auto-geocoded location: ${validatedData.name} → (${geocoded.latitude}, ${geocoded.longitude})`);
+        }
+      }
+      
       const location = await storage.createLocation(validatedData);
       res.status(201).json(location);
     } catch (error) {
@@ -1137,14 +1150,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
           // Create location with validated data
+          let finalLatitude = latitude || 0;
+          let finalLongitude = longitude || 0;
+
+          // Auto-geocode if coordinates are missing (0,0)
+          if ((finalLatitude === 0 && finalLongitude === 0) || (latitude === 0 && longitude === 0)) {
+            const geocoded = await geocodeLocation(city, state);
+            if (geocoded) {
+              finalLatitude = geocoded.latitude;
+              finalLongitude = geocoded.longitude;
+              console.log(`✅ Line ${lineNum + 1}: Auto-geocoded "${name}" → (${finalLatitude}, ${finalLongitude})`);
+            }
+          }
+
           const locationData = {
             name: name.substring(0, 255), // Limit name length
             city: city.substring(0, 100),
             state: state.substring(0, 10),
             category,
             taggedDate,
-            latitude: latitude || 0,
-            longitude: longitude || 0,
+            latitude: finalLatitude,
+            longitude: finalLongitude,
             photoUrl: photoUrl.substring(0, 500), // Allow longer URLs
             photoId: '', // Will be set separately if needed
             zipCode: '',
