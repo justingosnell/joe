@@ -114,10 +114,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       directives: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://unpkg.com"],
         imgSrc: ["'self'", "data:", "https:", "blob:"],
-        fontSrc: ["'self'"],
-        connectSrc: ["'self'"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        connectSrc: ["'self'", "https:"],
         frameSrc: ["'self'"],
         objectSrc: ["'none'"],
       },

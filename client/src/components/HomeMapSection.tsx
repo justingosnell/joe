@@ -390,7 +390,7 @@ export function HomeMapSection() {
 
       {/* Map Container */}
       <Card className="border-2 border-amber-200 overflow-hidden">
-        <div style={{ height: "400px", width: "100%" }}>
+        <div style={{ height: "700px", width: "100%" }}>
           <InteractiveMap
             locations={filteredLocations}
             selectedLocation={selectedLocation}
