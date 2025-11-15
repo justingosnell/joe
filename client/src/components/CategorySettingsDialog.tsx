@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
@@ -20,12 +20,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { getApiUrl } from "@/lib/api";
-import type { Category } from "@shared/schema";
-import { Upload, Trash2 } from "lucide-react";
+import type { Category, Media } from "@shared/schema";
+import { Upload, Trash2, Image as ImageIcon } from "lucide-react";
 
 const categorySettingsSchema = z.object({
   backgroundImageUrl: z.string().optional(),
@@ -56,6 +57,21 @@ export function CategorySettingsDialog({
   const [customIconFile, setCustomIconFile] = useState<File | null>(null);
   const [uploadingBg, setUploadingBg] = useState(false);
   const [uploadingIcon, setUploadingIcon] = useState(false);
+  const [bgMediaTab, setBgMediaTab] = useState<"upload" | "library">("upload");
+  const [iconMediaTab, setIconMediaTab] = useState<"upload" | "library">("upload");
+  const fileInputRefBg = useRef<HTMLInputElement>(null);
+  const fileInputRefIcon = useRef<HTMLInputElement>(null);
+
+  const { data: allMedia = [] } = useQuery<Media[]>({
+    queryKey: ["media"],
+    queryFn: async () => {
+      const response = await fetch(getApiUrl("/api/media"), {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch media");
+      return response.json();
+    },
+  });
 
   const form = useForm<CategorySettings>({
     resolver: zodResolver(categorySettingsSchema),
@@ -173,78 +189,138 @@ export function CategorySettingsDialog({
               <div className="space-y-4">
                 <div>
                   <h3 className="font-semibold mb-3">Background Image</h3>
-                  <div className="space-y-2">
-                    <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                        <p className="text-sm text-gray-500">
-                          Click to upload background image
-                        </p>
-                      </div>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleBackgroundImageUpload}
-                        disabled={uploadingBg}
-                      />
-                    </label>
-                    {previewBackgroundImage && (
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={previewBackgroundImage}
-                          alt="Background preview"
-                          className="h-20 w-20 object-cover rounded border"
+                  <Tabs value={bgMediaTab} onValueChange={(v) => setBgMediaTab(v as "upload" | "library")} className="space-y-2">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="upload">Upload</TabsTrigger>
+                      <TabsTrigger value="library">From Library</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="upload" className="space-y-2">
+                      <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                          <p className="text-sm text-gray-500">
+                            Click to upload background image
+                          </p>
+                        </div>
+                        <input
+                          ref={fileInputRefBg}
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleBackgroundImageUpload}
+                          disabled={uploadingBg}
                         />
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => form.setValue("backgroundImageUrl", "")}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                      </label>
+                    </TabsContent>
+                    
+                    <TabsContent value="library" className="space-y-2 max-h-64 overflow-y-auto">
+                      {allMedia.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">No media in library</p>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2">
+                          {allMedia.map((media) => (
+                            <button
+                              key={media.id}
+                              type="button"
+                              onClick={() => form.setValue("backgroundImageUrl", media.url)}
+                              className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                                previewBackgroundImage === media.url ? "border-primary" : "border-transparent"
+                              }`}
+                            >
+                              <img src={media.url} alt={media.originalName} className="w-full h-full object-cover" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </TabsContent>
+                  </Tabs>
+                  
+                  {previewBackgroundImage && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <img
+                        src={previewBackgroundImage}
+                        alt="Background preview"
+                        className="h-20 w-20 object-cover rounded border"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => form.setValue("backgroundImageUrl", "")}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 <div>
                   <h3 className="font-semibold mb-3">Custom Icon/Image</h3>
-                  <div className="space-y-2">
-                    <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                        <p className="text-sm text-gray-500">
-                          Click to upload custom icon
-                        </p>
-                      </div>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleCustomIconUpload}
-                        disabled={uploadingIcon}
-                      />
-                    </label>
-                    {previewCustomIcon && (
-                      <div className="flex items-center gap-2">
-                        <img
-                          src={previewCustomIcon}
-                          alt="Icon preview"
-                          className="h-20 w-20 object-contain rounded border"
+                  <Tabs value={iconMediaTab} onValueChange={(v) => setIconMediaTab(v as "upload" | "library")} className="space-y-2">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="upload">Upload</TabsTrigger>
+                      <TabsTrigger value="library">From Library</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="upload" className="space-y-2">
+                      <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                          <p className="text-sm text-gray-500">
+                            Click to upload custom icon
+                          </p>
+                        </div>
+                        <input
+                          ref={fileInputRefIcon}
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleCustomIconUpload}
+                          disabled={uploadingIcon}
                         />
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => form.setValue("customIconUrl", "")}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                      </label>
+                    </TabsContent>
+                    
+                    <TabsContent value="library" className="space-y-2 max-h-64 overflow-y-auto">
+                      {allMedia.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-4">No media in library</p>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2">
+                          {allMedia.map((media) => (
+                            <button
+                              key={media.id}
+                              type="button"
+                              onClick={() => form.setValue("customIconUrl", media.url)}
+                              className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                                previewCustomIcon === media.url ? "border-primary" : "border-transparent"
+                              }`}
+                            >
+                              <img src={media.url} alt={media.originalName} className="w-full h-full object-contain bg-gray-100" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </TabsContent>
+                  </Tabs>
+                  
+                  {previewCustomIcon && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <img
+                        src={previewCustomIcon}
+                        alt="Icon preview"
+                        className="h-20 w-20 object-contain rounded border"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => form.setValue("customIconUrl", "")}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
 
