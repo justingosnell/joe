@@ -124,16 +124,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Slideshow Section */}
-        <section className="mb-12 py-8 px-6 rounded-lg bg-card border border-border">
-          <MediaSlideshow />
-        </section>
-
-
-
-        {/* Interactive Map Section */}
-        <HomeMapSection />
-
         {/* Category Collections */}
         <section className="mb-12">
           <h2 className="text-3xl font-bold mb-6 text-foreground">Roadside Collections</h2>
@@ -222,6 +212,14 @@ export default function Home() {
               );
             })}
           </div>
+        </section>
+
+        {/* Interactive Map Section */}
+        <HomeMapSection />
+
+        {/* Slideshow Section */}
+        <section className="mb-12 py-8 px-6 rounded-lg bg-card border border-border">
+          <MediaSlideshow />
         </section>
 
         {/* Call to Action */}
