@@ -25,6 +25,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { getApiUrl } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import type { Category, Media } from "@shared/schema";
 import { Upload, Trash2, Image as ImageIcon } from "lucide-react";
 
@@ -53,6 +54,7 @@ export function CategorySettingsDialog({
   onSave,
   isLoading = false,
 }: CategorySettingsDialogProps) {
+  const { toast } = useToast();
   const [backgroundImageFile, setBackgroundImageFile] = useState<File | null>(null);
   const [customIconFile, setCustomIconFile] = useState<File | null>(null);
   const [uploadingBg, setUploadingBg] = useState(false);
@@ -116,14 +118,18 @@ export function CategorySettingsDialog({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to upload image");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to upload image");
       }
 
       const data = await response.json();
       const url = data.url || data.publicUrl;
       form.setValue("backgroundImageUrl", url);
+      toast({ title: "Success", description: "Background image uploaded" });
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to upload image";
       console.error("Error uploading background image:", error);
+      toast({ title: "Error", description: errorMessage, variant: "destructive" });
     } finally {
       setUploadingBg(false);
     }
@@ -149,14 +155,18 @@ export function CategorySettingsDialog({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to upload icon");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to upload icon");
       }
 
       const data = await response.json();
       const url = data.url || data.publicUrl;
       form.setValue("customIconUrl", url);
+      toast({ title: "Success", description: "Custom icon uploaded" });
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to upload icon";
       console.error("Error uploading custom icon:", error);
+      toast({ title: "Error", description: errorMessage, variant: "destructive" });
     } finally {
       setUploadingIcon(false);
     }
