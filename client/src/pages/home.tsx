@@ -9,11 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Search, MapPin, Camera, Signpost } from "lucide-react";
 import { MediaSlideshow } from "@/components/MediaSlideshow";
 import { HomeMapSection } from "@/components/HomeMapSection";
+import { CategorySlideshowModal } from "@/components/CategorySlideshowModal";
 import { getApiUrl } from "@/lib/api";
 import type { Location } from "@shared/schema";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Fetch locations from API
   const { data: locations = [], isLoading } = useQuery<Location[]>({
@@ -53,6 +56,23 @@ export default function Home() {
         customIconUrl: (category as any).customIconUrl,
       }));
   }, [categories, locations]);
+
+  // Get images for selected category
+  const categoryImages = useMemo(() => {
+    if (!selectedCategory) return [];
+    return locations.filter(
+      (loc) => loc.category === selectedCategory && loc.photoUrl
+    );
+  }, [locations, selectedCategory]);
+
+  // Get category title for modal
+  const selectedCategoryTitle = useMemo(() => {
+    if (!selectedCategory) return "";
+    return (
+      categoryCollections.find((cat) => cat.category === selectedCategory)
+        ?.title || ""
+    );
+  }, [selectedCategory, categoryCollections]);
 
   // Search functionality
   const searchResults = useMemo(() => {
@@ -116,7 +136,7 @@ export default function Home() {
 
         {/* Category Collections */}
         <section className="mb-12">
-          <h2 className="text-3xl font-bold mb-6 text-foreground">Quirky Collections</h2>
+          <h2 className="text-3xl font-bold mb-6 text-foreground">Roadside Collections</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {categoryCollections.map((collection) => {
               const backgroundImage = (collection as any).backgroundImageUrl;
@@ -188,6 +208,10 @@ export default function Home() {
                           backgroundColor: textColor,
                           color: overlayColor,
                         }}
+                        onClick={() => {
+                          setSelectedCategory(collection.category);
+                          setIsModalOpen(true);
+                        }}
                       >
                         Explore →
                       </Button>
@@ -228,6 +252,13 @@ export default function Home() {
           </p>
         </div>
       </footer>
+
+      <CategorySlideshowModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        categoryTitle={selectedCategoryTitle}
+        images={categoryImages}
+      />
     </div>
   );
 }
