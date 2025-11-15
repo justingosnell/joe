@@ -353,6 +353,8 @@
   font-weight: 600;
   font-size: 0.75rem;
   white-space: nowrap;
+  border: none;
+  --ribbon-bg: #f97316;
   /* Create V-notch at bottom */
   clip-path: polygon(
     0% 0%,
@@ -375,7 +377,7 @@
   height: 0;
   border-style: solid;
   border-width: 12px 12px 12px 0;
-  border-color: transparent #f97316 transparent transparent;
+  border-color: transparent var(--ribbon-bg, #f97316) transparent transparent;
 }
 
 /* Right triangle tail */
@@ -389,5 +391,5 @@
   height: 0;
   border-style: solid;
   border-width: 12px 0 12px 12px;
-  border-color: transparent transparent transparent #f97316;
+  border-color: transparent transparent transparent var(--ribbon-bg, #f97316);
 }

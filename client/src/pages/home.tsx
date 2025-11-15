@@ -202,19 +202,20 @@ export default function Home() {
                       >
                         {collection.count}
                       </span>
-                      <Button
-                        className="text-xs"
+                      <button
+                        className="ribbon-badge-custom text-xs cursor-pointer transition-all hover:scale-105"
                         style={{
                           backgroundColor: textColor,
                           color: overlayColor,
-                        }}
+                          '--ribbon-bg': textColor,
+                        } as React.CSSProperties & { '--ribbon-bg': string }}
                         onClick={() => {
                           setSelectedCategory(collection.category);
                           setIsModalOpen(true);
                         }}
                       >
                         Explore →
-                      </Button>
+                      </button>
                     </div>
                   </CardContent>
                 </Card>
