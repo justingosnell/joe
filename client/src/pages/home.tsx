@@ -46,6 +46,11 @@ export default function Home() {
         count: locations.filter(loc => loc.category === category.slug).length,
         icon: category.icon,
         color: category.color,
+        backgroundImageUrl: (category as any).backgroundImageUrl,
+        overlayColor: (category as any).overlayColor,
+        overlayOpacity: (category as any).overlayOpacity,
+        textColor: (category as any).textColor,
+        customIconUrl: (category as any).customIconUrl,
       }));
   }, [categories, locations]);
 
@@ -113,42 +118,85 @@ export default function Home() {
         <section className="mb-12">
           <h2 className="text-3xl font-bold mb-6 text-foreground">Quirky Collections</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {categoryCollections.map((collection) => (
-              <Card
-                key={collection.category}
-                className="border shadow-md cursor-pointer group rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
-              >
-                <CardHeader>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="text-5xl mb-3 group-hover:scale-110 transition-transform flex items-center justify-center h-16">
-                    {collection.icon.startsWith('http') || collection.icon.startsWith('/') ? (
-                      <img
-                        src={collection.icon}
-                        alt={collection.title}
-                        className="w-16 h-16 object-contain"
-                      />
-                    ) : (
-                      collection.icon
-                    )}
-                  </div>
-                  <CardTitle className="text-xl text-foreground">
-                    {collection.title}
-                  </CardTitle>
-                  <CardDescription className="text-muted-foreground">
-                    {collection.description}
-                  </CardDescription>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-primary">
-                      {collection.count}
-                    </span>
-                    <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                      Explore →
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            {categoryCollections.map((collection) => {
+              const backgroundImage = (collection as any).backgroundImageUrl;
+              const overlayColor = (collection as any).overlayColor || "#000000";
+              const overlayOpacity = parseFloat((collection as any).overlayOpacity || "0.5");
+              const textColor = (collection as any).textColor || "#ffffff";
+              const customIcon = (collection as any).customIconUrl;
+
+              return (
+                <Card
+                  key={collection.category}
+                  className="border shadow-md cursor-pointer group rounded-lg overflow-hidden hover:shadow-lg transition-shadow h-64 relative"
+                >
+                  {backgroundImage && (
+                    <div
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{
+                        backgroundImage: `url(${backgroundImage})`,
+                      }}
+                    />
+                  )}
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      backgroundColor: overlayColor,
+                      opacity: overlayOpacity,
+                    }}
+                  />
+                  <CardHeader className="relative z-10" />
+                  <CardContent className="pt-6 relative z-10 h-full flex flex-col justify-between">
+                    <div>
+                      <div className="text-5xl mb-3 group-hover:scale-110 transition-transform flex items-center justify-center h-16">
+                        {customIcon ? (
+                          <img
+                            src={customIcon}
+                            alt={collection.title}
+                            className="w-16 h-16 object-contain"
+                          />
+                        ) : collection.icon.startsWith("http") ||
+                          collection.icon.startsWith("/") ? (
+                          <img
+                            src={collection.icon}
+                            alt={collection.title}
+                            className="w-16 h-16 object-contain"
+                          />
+                        ) : (
+                          collection.icon
+                        )}
+                      </div>
+                      <CardTitle
+                        className="text-xl"
+                        style={{ color: textColor }}
+                      >
+                        {collection.title}
+                      </CardTitle>
+                      <CardDescription style={{ color: textColor, opacity: 0.8 }}>
+                        {collection.description}
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span
+                        className="text-2xl font-bold"
+                        style={{ color: textColor }}
+                      >
+                        {collection.count}
+                      </span>
+                      <Button
+                        className="text-xs"
+                        style={{
+                          backgroundColor: textColor,
+                          color: overlayColor,
+                        }}
+                      >
+                        Explore →
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </section>
 

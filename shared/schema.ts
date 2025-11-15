@@ -107,6 +107,11 @@ export const categories = pgTable("categories", {
   icon: text("icon").default("📍"),
   color: text("color").default("#f97316"), // Default orange color
   displayOrder: doublePrecision("display_order").default(0),
+  backgroundImageUrl: text("background_image_url"),
+  overlayColor: text("overlay_color").default("#000000"),
+  overlayOpacity: text("overlay_opacity").default("0.5"),
+  textColor: text("text_color").default("#ffffff"),
+  customIconUrl: text("custom_icon_url"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });

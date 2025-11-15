@@ -152,7 +152,7 @@ function InteractiveMap({
   return (
     <MapContainer
       center={[39.8283, -98.5795] as [number, number]}
-      zoom={4}
+      zoom={5}
       className="h-full w-full rounded"
       zoomControl={true}
     >

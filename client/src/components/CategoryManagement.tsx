@@ -3,8 +3,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, GripVertical, Palette } from "lucide-react";
 import { CategoryDialog } from "@/components/CategoryDialog";
+import { CategorySettingsDialog } from "@/components/CategorySettingsDialog";
 import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/api";
 import type { Category, InsertCategory } from "@shared/schema";
@@ -21,7 +22,9 @@ import {
 
 export function CategoryManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [categoryForSettings, setCategoryForSettings] = useState<Category | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const { toast } = useToast();
@@ -65,8 +68,8 @@ export function CategoryManagement() {
 
   // Update category mutation
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<InsertCategory> }) => {
-      const response = await fetch(`/api/categories/${id}`, {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertCategory> }) => {
+      const response = await fetch(`${getApiUrl("/api/categories")}/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -89,10 +92,55 @@ export function CategoryManagement() {
     },
   });
 
+  // Update category settings mutation
+  const updateSettingsMutation = useMutation({
+    mutationFn: async ({
+      id,
+      settings,
+    }: {
+      id: string;
+      settings: {
+        backgroundImageUrl?: string;
+        overlayColor: string;
+        overlayOpacity: string;
+        textColor: string;
+        customIconUrl?: string;
+      };
+    }) => {
+      const response = await fetch(`${getApiUrl("/api/categories")}/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to update category settings");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      toast({
+        title: "Success",
+        description: "Category settings updated successfully",
+      });
+      setSettingsDialogOpen(false);
+      setCategoryForSettings(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   // Delete category mutation
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const response = await fetch(`/api/categories/${id}`, {
+    mutationFn: async (id: string) => {
+      const response = await fetch(`${getApiUrl("/api/categories")}/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -123,6 +171,11 @@ export function CategoryManagement() {
   const handleEdit = (category: Category) => {
     setSelectedCategory(category);
     setDialogOpen(true);
+  };
+
+  const handleSettings = (category: Category) => {
+    setCategoryForSettings(category);
+    setSettingsDialogOpen(true);
   };
 
   const handleDelete = (category: Category) => {
@@ -218,6 +271,15 @@ export function CategoryManagement() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      onClick={() => handleSettings(category)}
+                      className="h-8 w-8"
+                      title="Customize appearance"
+                    >
+                      <Palette className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => handleEdit(category)}
                       className="h-8 w-8"
                     >
@@ -261,6 +323,25 @@ export function CategoryManagement() {
         onSubmit={handleSubmit}
         isLoading={createMutation.isPending || updateMutation.isPending}
       />
+
+      {/* Category Settings Dialog */}
+      {categoryForSettings && (
+        <CategorySettingsDialog
+          open={settingsDialogOpen}
+          onOpenChange={(open) => {
+            setSettingsDialogOpen(open);
+            if (!open) setCategoryForSettings(null);
+          }}
+          category={categoryForSettings}
+          onSave={(settings) => {
+            updateSettingsMutation.mutate({
+              id: categoryForSettings.id,
+              settings,
+            });
+          }}
+          isLoading={updateSettingsMutation.isPending}
+        />
+      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

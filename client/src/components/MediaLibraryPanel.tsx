@@ -5,9 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, X, Search, Trash2, Edit2, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Upload, X, Search, Trash2, Edit2, Check } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getApiUrl } from "@/lib/api";
 import type { Media } from "@shared/schema";
@@ -28,8 +27,6 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
   const [editAlt, setEditAlt] = useState("");
   const [editCaption, setEditCaption] = useState("");
   const [selectedTab, setSelectedTab] = useState<"library" | "upload">("library");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 80;
 
   // Fetch all media
   const { data: allMedia = [], isLoading } = useQuery<Media[]>({
@@ -54,16 +51,8 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
     );
   });
 
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredMedia.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedMedia = filteredMedia.slice(startIndex, endIndex);
-
-  // Reset to first page when search query changes
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    setCurrentPage(1);
   };
 
   // Upload mutation for single file
@@ -265,8 +254,8 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
   };
 
   return (
-    <Card className="w-full h-[600px] flex flex-col p-0">
-      <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as "library" | "upload")} className="flex-1 flex flex-col overflow-hidden p-6 pb-0">
+    <Card className="w-full flex flex-col p-0">
+      <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as "library" | "upload")} className="flex flex-col p-6 pb-0">
         <TabsList className="grid w-full grid-cols-2 mb-4">
           <TabsTrigger value="library">Library ({allMedia.length})</TabsTrigger>
           <TabsTrigger value="upload">
@@ -275,7 +264,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="library" className="flex-1 flex flex-col overflow-hidden mt-0 mb-0">
+        <TabsContent value="library" className="flex flex-col mt-0 mb-0">
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -297,7 +286,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
             )}
           </div>
 
-          <ScrollArea className="flex-1 h-[400px]">
+          <div>
             {isLoading ? (
               <div className="text-center py-8 text-muted-foreground">Loading media...</div>
             ) : filteredMedia.length === 0 ? (
@@ -305,8 +294,8 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
                 {searchQuery ? "No media found matching your search" : "No media uploaded yet"}
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 pb-4 pr-4">
-                {paginatedMedia.map((media) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 pb-4">
+                {filteredMedia.map((media) => (
                   <Card
                     key={media.id}
                     className={`group relative overflow-hidden cursor-pointer transition-all hover:ring-2 hover:ring-primary ${
@@ -379,49 +368,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
                 ))}
               </div>
             )}
-          </ScrollArea>
-
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-1 py-3 mt-2 flex-wrap">
-              <Button variant="outline" size="icon" onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="h-8 w-8">
-                <ChevronLeft className="h-3 w-3" />
-              </Button>
-              <div className="flex items-center gap-1">
-                {totalPages <= 7 ? (
-                  Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <Button key={page} variant={currentPage === page ? "default" : "outline"} size="sm" onClick={() => setCurrentPage(page)} className="h-8 w-8 text-xs">
-                      {page}
-                    </Button>
-                  ))
-                ) : (
-                  <>
-                    <Button variant={currentPage === 1 ? "default" : "outline"} size="sm" onClick={() => setCurrentPage(1)} className="h-8 w-8 text-xs">
-                      1
-                    </Button>
-                    {currentPage > 3 && <span className="text-xs px-1">...</span>}
-                    {Array.from({ length: Math.min(3, totalPages - 2) }, (_, i) => {
-                      const page = Math.max(2, currentPage - 1) + i;
-                      if (page < totalPages) return page;
-                      return null;
-                    })
-                      .filter(Boolean)
-                      .map(page => (
-                        <Button key={page} variant={currentPage === page ? "default" : "outline"} size="sm" onClick={() => setCurrentPage(page as number)} className="h-8 w-8 text-xs">
-                          {page}
-                        </Button>
-                      ))}
-                    {currentPage < totalPages - 2 && <span className="text-xs px-1">...</span>}
-                    <Button variant={currentPage === totalPages ? "default" : "outline"} size="sm" onClick={() => setCurrentPage(totalPages)} className="h-8 w-8 text-xs">
-                      {totalPages}
-                    </Button>
-                  </>
-                )}
-              </div>
-              <Button variant="outline" size="icon" onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="h-8 w-8">
-                <ChevronRight className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
+          </div>
 
           {editingMedia && mode === "manage" && (
             <div className="mt-4 p-4 bg-muted rounded border">
