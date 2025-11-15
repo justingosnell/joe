@@ -145,8 +145,7 @@ export default function Home() {
                       opacity: overlayOpacity,
                     }}
                   />
-                  <CardHeader className="relative z-10" />
-                  <CardContent className="pt-6 relative z-10 h-full flex flex-col justify-between">
+                  <CardContent className="p-6 relative z-10 h-full flex flex-col justify-between">
                     <div>
                       <div className="text-5xl mb-3 group-hover:scale-110 transition-transform flex items-center justify-center h-16">
                         {customIcon ? (
