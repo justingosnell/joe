@@ -1478,7 +1478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update category (admin only)
   app.put("/api/categories/:id", requireAuth, async (req: Request, res: Response) => {
     try {
-      const { name, slug, description, icon, color, displayOrder } = req.body;
+      const { name, slug, description, icon, color, displayOrder, backgroundImageUrl, overlayColor, overlayOpacity, textColor, customIconUrl } = req.body;
       const updates: Partial<any> = {};
 
       if (name !== undefined) updates.name = name;
@@ -1497,6 +1497,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (icon !== undefined) updates.icon = icon;
       if (color !== undefined) updates.color = color;
       if (displayOrder !== undefined) updates.displayOrder = displayOrder;
+      if (backgroundImageUrl !== undefined) updates.backgroundImageUrl = backgroundImageUrl;
+      if (overlayColor !== undefined) updates.overlayColor = overlayColor;
+      if (overlayOpacity !== undefined) updates.overlayOpacity = overlayOpacity;
+      if (textColor !== undefined) updates.textColor = textColor;
+      if (customIconUrl !== undefined) updates.customIconUrl = customIconUrl;
 
       const category = await storage.updateCategory(req.params.id, updates);
       
