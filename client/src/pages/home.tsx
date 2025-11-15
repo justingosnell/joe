@@ -165,33 +165,33 @@ export default function Home() {
                       opacity: overlayOpacity,
                     }}
                   />
-                  <CardContent className="p-6 relative z-10 h-full flex flex-col justify-between">
-                    <div>
-                      <div className="text-5xl mb-3 group-hover:scale-110 transition-transform flex items-center justify-center h-16">
+                  <CardContent className="p-4 relative z-10 h-full flex flex-col justify-between">
+                    <div className="min-h-0">
+                      <div className="text-5xl mb-2 group-hover:scale-110 transition-transform flex items-center justify-center h-12">
                         {customIcon ? (
                           <img
                             src={customIcon}
                             alt={collection.title}
-                            className="w-16 h-16 object-contain"
+                            className="w-12 h-12 object-contain"
                           />
                         ) : collection.icon.startsWith("http") ||
                           collection.icon.startsWith("/") ? (
                           <img
                             src={collection.icon}
                             alt={collection.title}
-                            className="w-16 h-16 object-contain"
+                            className="w-12 h-12 object-contain"
                           />
                         ) : (
                           collection.icon
                         )}
                       </div>
                       <CardTitle
-                        className="text-xl"
+                        className="text-lg line-clamp-2"
                         style={{ color: textColor }}
                       >
                         {collection.title}
                       </CardTitle>
-                      <CardDescription style={{ color: textColor, opacity: 0.8 }}>
+                      <CardDescription style={{ color: textColor, opacity: 0.8 }} className="text-xs line-clamp-1">
                         {collection.description}
                       </CardDescription>
                     </div>
