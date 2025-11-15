@@ -61,6 +61,8 @@ export function CategorySettingsDialog({
   const [uploadingIcon, setUploadingIcon] = useState(false);
   const [bgMediaTab, setBgMediaTab] = useState<"upload" | "library">("upload");
   const [iconMediaTab, setIconMediaTab] = useState<"upload" | "library">("upload");
+  const [bgSelectorOpen, setBgSelectorOpen] = useState(false);
+  const [iconSelectorOpen, setIconSelectorOpen] = useState(false);
   const fileInputRefBg = useRef<HTMLInputElement>(null);
   const fileInputRefIcon = useRef<HTMLInputElement>(null);
 
@@ -199,55 +201,18 @@ export function CategorySettingsDialog({
               <div className="space-y-4">
                 <div>
                   <h3 className="font-semibold mb-3">Background Image</h3>
-                  <Tabs value={bgMediaTab} onValueChange={(v) => setBgMediaTab(v as "upload" | "library")} className="space-y-2">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="upload">Upload</TabsTrigger>
-                      <TabsTrigger value="library">From Library</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="upload" className="space-y-2">
-                      <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                          <p className="text-sm text-gray-500">
-                            Click to upload background image
-                          </p>
-                        </div>
-                        <input
-                          ref={fileInputRefBg}
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          onChange={handleBackgroundImageUpload}
-                          disabled={uploadingBg}
-                        />
-                      </label>
-                    </TabsContent>
-                    
-                    <TabsContent value="library" className="space-y-2 max-h-64 overflow-y-auto">
-                      {allMedia.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-4">No media in library</p>
-                      ) : (
-                        <div className="grid grid-cols-3 gap-2">
-                          {allMedia.map((media) => (
-                            <button
-                              key={media.id}
-                              type="button"
-                              onClick={() => form.setValue("backgroundImageUrl", media.url)}
-                              className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                                previewBackgroundImage === media.url ? "border-primary" : "border-transparent"
-                              }`}
-                            >
-                              <img src={media.url} alt={media.originalName} className="w-full h-full object-cover" />
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </TabsContent>
-                  </Tabs>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setBgSelectorOpen(true)}
+                    className="w-full justify-start"
+                  >
+                    <ImageIcon className="w-4 h-4 mr-2" />
+                    {previewBackgroundImage ? "Change Background Image" : "Select Background Image"}
+                  </Button>
                   
                   {previewBackgroundImage && (
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-2 mt-3">
                       <img
                         src={previewBackgroundImage}
                         alt="Background preview"
@@ -267,55 +232,18 @@ export function CategorySettingsDialog({
 
                 <div>
                   <h3 className="font-semibold mb-3">Custom Icon/Image</h3>
-                  <Tabs value={iconMediaTab} onValueChange={(v) => setIconMediaTab(v as "upload" | "library")} className="space-y-2">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="upload">Upload</TabsTrigger>
-                      <TabsTrigger value="library">From Library</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="upload" className="space-y-2">
-                      <label className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                          <p className="text-sm text-gray-500">
-                            Click to upload custom icon
-                          </p>
-                        </div>
-                        <input
-                          ref={fileInputRefIcon}
-                          type="file"
-                          className="hidden"
-                          accept="image/*"
-                          onChange={handleCustomIconUpload}
-                          disabled={uploadingIcon}
-                        />
-                      </label>
-                    </TabsContent>
-                    
-                    <TabsContent value="library" className="space-y-2 max-h-64 overflow-y-auto">
-                      {allMedia.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-4">No media in library</p>
-                      ) : (
-                        <div className="grid grid-cols-3 gap-2">
-                          {allMedia.map((media) => (
-                            <button
-                              key={media.id}
-                              type="button"
-                              onClick={() => form.setValue("customIconUrl", media.url)}
-                              className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                                previewCustomIcon === media.url ? "border-primary" : "border-transparent"
-                              }`}
-                            >
-                              <img src={media.url} alt={media.originalName} className="w-full h-full object-contain bg-gray-100" />
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </TabsContent>
-                  </Tabs>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIconSelectorOpen(true)}
+                    className="w-full justify-start"
+                  >
+                    <ImageIcon className="w-4 h-4 mr-2" />
+                    {previewCustomIcon ? "Change Custom Icon" : "Select Custom Icon"}
+                  </Button>
                   
                   {previewCustomIcon && (
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-2 mt-3">
                       <img
                         src={previewCustomIcon}
                         alt="Icon preview"
@@ -477,6 +405,124 @@ export function CategorySettingsDialog({
             </DialogFooter>
           </form>
         </Form>
+
+        {/* Background Image Selection Dialog */}
+        <Dialog open={bgSelectorOpen} onOpenChange={setBgSelectorOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Select Background Image</DialogTitle>
+            </DialogHeader>
+            
+            <Tabs value={bgMediaTab} onValueChange={(v) => setBgMediaTab(v as "upload" | "library")} className="space-y-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="upload">Upload New</TabsTrigger>
+                <TabsTrigger value="library">From Library</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="upload" className="space-y-2">
+                <label className="flex items-center justify-center w-full px-4 py-8 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <Upload className="w-10 h-10 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500">Click to upload background image</p>
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => {
+                      handleBackgroundImageUpload(e);
+                      setBgSelectorOpen(false);
+                    }}
+                    disabled={uploadingBg}
+                  />
+                </label>
+              </TabsContent>
+              
+              <TabsContent value="library" className="space-y-2 max-h-[60vh] overflow-y-auto">
+                {allMedia.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No media in library</p>
+                ) : (
+                  <div className="grid grid-cols-4 gap-3">
+                    {allMedia.map((media) => (
+                      <button
+                        key={media.id}
+                        type="button"
+                        onClick={() => {
+                          form.setValue("backgroundImageUrl", media.url);
+                          setBgSelectorOpen(false);
+                        }}
+                        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:opacity-80 ${
+                          previewBackgroundImage === media.url ? "border-primary border-4" : "border-gray-200"
+                        }`}
+                      >
+                        <img src={media.url} alt={media.originalName} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </DialogContent>
+        </Dialog>
+
+        {/* Custom Icon Selection Dialog */}
+        <Dialog open={iconSelectorOpen} onOpenChange={setIconSelectorOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Select Custom Icon</DialogTitle>
+            </DialogHeader>
+            
+            <Tabs value={iconMediaTab} onValueChange={(v) => setIconMediaTab(v as "upload" | "library")} className="space-y-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="upload">Upload New</TabsTrigger>
+                <TabsTrigger value="library">From Library</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="upload" className="space-y-2">
+                <label className="flex items-center justify-center w-full px-4 py-8 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <Upload className="w-10 h-10 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500">Click to upload custom icon</p>
+                  </div>
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => {
+                      handleCustomIconUpload(e);
+                      setIconSelectorOpen(false);
+                    }}
+                    disabled={uploadingIcon}
+                  />
+                </label>
+              </TabsContent>
+              
+              <TabsContent value="library" className="space-y-2 max-h-[60vh] overflow-y-auto">
+                {allMedia.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No media in library</p>
+                ) : (
+                  <div className="grid grid-cols-4 gap-3">
+                    {allMedia.map((media) => (
+                      <button
+                        key={media.id}
+                        type="button"
+                        onClick={() => {
+                          form.setValue("customIconUrl", media.url);
+                          setIconSelectorOpen(false);
+                        }}
+                        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:opacity-80 bg-gray-100 ${
+                          previewCustomIcon === media.url ? "border-primary border-4" : "border-gray-200"
+                        }`}
+                      >
+                        <img src={media.url} alt={media.originalName} className="w-full h-full object-contain" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );
