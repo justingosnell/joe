@@ -333,7 +333,7 @@ export function HomeMapSection() {
   return (
     <section className="mb-12">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-3xl font-bold text-amber-900 flex items-center gap-2">
+        <h2 className="luckiest-guy-regular text-3xl font-bold text-amber-900 flex items-center gap-2">
           <MapIcon className="h-7 w-7 text-orange-500" />
           Interactive Map
         </h2>

@@ -101,3 +101,24 @@ export function clearGeocodeCache(): void {
 export function getGeocodeCache(): Map<string, { latitude: number; longitude: number }> {
   return CACHE;
 }
+
+/**
+ * Check if coordinates are within reasonable bounds for US locations
+ * This helps detect geocoding errors that place markers in wrong continents
+ */
+export function isValidUSCoordinates(latitude: number, longitude: number): boolean {
+  // US continental bounds (with some padding for Alaska/Hawaii)
+  const minLat = 18.0;  // Southern Florida
+  const maxLat = 72.0;  // Northern Alaska
+  const minLon = -180.0; // Western Pacific
+  const maxLon = -50.0;  // Eastern Atlantic
+
+  return (
+    latitude >= minLat &&
+    latitude <= maxLat &&
+    longitude >= minLon &&
+    longitude <= maxLon &&
+    // Exclude obvious non-US locations (e.g., Africa would be around 0,0 to 40,40)
+    !(latitude >= -10 && latitude <= 40 && longitude >= -20 && longitude <= 50)
+  );
+}

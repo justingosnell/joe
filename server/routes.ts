@@ -1110,6 +1110,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Re-geocode locations with invalid coordinates
+  app.post("/api/locations/regeocode-invalid", requireAuth, async (req: Request, res: Response) => {
+    try {
+      console.log("🔄 Re-geocoding invalid locations request from user:", req.session.userId);
+
+      // Get all locations
+      const locations = await storage.getAllLocations();
+      const { isValidUSCoordinates, geocodeLocation } = await import("./geocoding");
+
+      const invalidLocations = locations.filter(loc =>
+        !isValidUSCoordinates(loc.latitude || 0, loc.longitude || 0)
+      );
+
+      console.log(`📍 Found ${invalidLocations.length} locations with invalid coordinates`);
+
+      if (invalidLocations.length === 0) {
+        return res.json({
+          message: "No locations with invalid coordinates found",
+          processed: 0,
+          updated: 0
+        });
+      }
+
+      let updated = 0;
+      const results = [];
+
+      for (const location of invalidLocations) {
+        try {
+          console.log(`🔄 Re-geocoding: ${location.name} (${location.city}, ${location.state})`);
+
+          const geocoded = await geocodeLocation(location.city || "", location.state);
+          if (geocoded) {
+            await storage.updateLocation(location.id, {
+              latitude: geocoded.latitude,
+              longitude: geocoded.longitude,
+            });
+            updated++;
+            results.push({
+              id: location.id,
+              name: location.name,
+              oldCoords: { lat: location.latitude, lng: location.longitude },
+              newCoords: geocoded,
+              status: "updated"
+            });
+            console.log(`✅ Updated ${location.name}: (${geocoded.latitude}, ${geocoded.longitude})`);
+          } else {
+            results.push({
+              id: location.id,
+              name: location.name,
+              coords: { lat: location.latitude, lng: location.longitude },
+              status: "failed_to_geocode"
+            });
+            console.warn(`⚠️ Failed to re-geocode ${location.name}`);
+          }
+        } catch (error) {
+          console.error(`❌ Error re-geocoding ${location.name}:`, error);
+          results.push({
+            id: location.id,
+            name: location.name,
+            coords: { lat: location.latitude, lng: location.longitude },
+            status: "error",
+            error: error instanceof Error ? error.message : "Unknown error"
+          });
+        }
+      }
+
+      res.json({
+        message: `Processed ${invalidLocations.length} locations, updated ${updated}`,
+        processed: invalidLocations.length,
+        updated,
+        results
+      });
+    } catch (error) {
+      console.error("Re-geocode locations error:", error);
+      res.status(500).json({ message: "Failed to re-geocode locations" });
+    }
+  });
+
   // Bulk upload locations from text file
   app.post("/api/locations/bulk-upload", requireAuth, async (req: Request, res: Response) => {
     try {

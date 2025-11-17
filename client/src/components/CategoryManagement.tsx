@@ -209,7 +209,7 @@ export function CategoryManagement() {
     <>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold">Category Management</h2>
+          <h2 className="luckiest-guy-regular text-2xl font-bold">Category Management</h2>
           <p className="text-sm text-muted-foreground">
             Manage location categories and their properties
           </p>
@@ -298,7 +298,7 @@ export function CategoryManagement() {
               </CardHeader>
               <CardContent className="space-y-2">
                 {category.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">
+                  <p className="text-white text-lg line-clamp-2">
                     {category.description}
                   </p>
                 )}

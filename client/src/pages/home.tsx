@@ -209,7 +209,7 @@ export default function Home() {
                           setIsModalOpen(true);
                         }}
                       >
-                        Explore →
+                        See All →
                       </button>
                     </div>
                   </CardContent>

@@ -46,7 +46,7 @@ export function CategorySidebar({
   return (
     <div className="flex flex-col h-full">
       <div className="p-6 border-b">
-        <h2 className="text-lg font-semibold">Filter Attractions</h2>
+        <h2 className="luckiest-guy-regular text-lg font-semibold">Filter Attractions</h2>
         <p className="text-sm text-muted-foreground mt-1">
           Narrow down locations by category
         </p>

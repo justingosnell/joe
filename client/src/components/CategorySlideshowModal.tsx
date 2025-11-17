@@ -82,7 +82,7 @@ export function CategorySlideshowModal({
         <div className="bg-card border-b border-border shadow-lg">
           <div className="container mx-auto px-4 py-6 max-w-7xl">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-foreground">
+              <h2 className="luckiest-guy-regular text-2xl font-bold text-foreground">
                 {categoryTitle}
               </h2>
               <Button

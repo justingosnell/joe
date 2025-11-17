@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/api";
-import { LogOut, Plus, MapPin, Search, X, Image as ImageIcon, Upload, FileUp, FolderTree, Home } from "lucide-react";
+import { LogOut, Plus, MapPin, Search, X, Image as ImageIcon, Upload, FileUp, FolderTree, Home, RefreshCw } from "lucide-react";
 import { LocationTable } from "@/components/LocationTable";
 import { LocationDialog } from "@/components/LocationDialog";
 import { MediaLibraryPanel } from "@/components/MediaLibraryPanel";
@@ -150,6 +150,31 @@ export default function Admin() {
     },
   });
 
+  // Re-geocode invalid locations mutation
+  const regeocodeMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(getApiUrl("/api/locations/regeocode-invalid"), {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to re-geocode locations");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["locations"] });
+      toast({
+        title: "Re-geocoding Complete",
+        description: `Processed ${data.processed} locations, updated ${data.updated} coordinates`
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   const handleLogout = async () => {
     await logout();
     toast({ title: "Logged out", description: "You have been logged out successfully" });
@@ -272,6 +297,16 @@ export default function Admin() {
                       </CardDescription>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
+                      <Button
+                        onClick={() => regeocodeMutation.mutate()}
+                        variant="outline"
+                        className="flex-1 sm:flex-none"
+                        disabled={regeocodeMutation.isPending}
+                      >
+                        <RefreshCw className={`mr-2 h-4 w-4 ${regeocodeMutation.isPending ? 'animate-spin' : ''}`} />
+                        <span className="hidden sm:inline">Fix Markers</span>
+                        <span className="sm:hidden">Fix</span>
+                      </Button>
                       <Button onClick={() => setIsBulkUploadOpen(true)} variant="outline" className="flex-1 sm:flex-none">
                         <FileUp className="mr-2 h-4 w-4" />
                         <span className="hidden sm:inline">Bulk Upload</span>
@@ -346,7 +381,7 @@ export default function Admin() {
           <div className="w-full h-auto">
             <div className="px-4 py-4 sm:py-8">
               <div className="mb-4">
-                <h2 className="text-2xl font-bold">Media Library</h2>
+                <h2 className="luckiest-guy-regular text-2xl font-bold">Media Library</h2>
                 <p className="text-sm text-muted-foreground">
                   Manage your uploaded images and media files
                 </p>

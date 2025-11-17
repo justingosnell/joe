@@ -60,7 +60,7 @@ export function PhotoPanel({ location, onClose }: PhotoPanelProps) {
                   <Tag className="h-3 w-3 mr-1" />
                   {getCategoryLabel(location.category)}
                 </Badge>
-                <h2 className="text-2xl font-bold text-white" data-testid="text-location-name">
+                <h2 className="luckiest-guy-regular text-2xl font-bold text-white" data-testid="text-location-name">
                   {location.name}
                 </h2>
               </div>

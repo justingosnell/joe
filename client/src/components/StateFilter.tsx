@@ -71,7 +71,7 @@ export function StateFilter({ selectedState, onStateChange }: StateFilterProps) 
   return (
     <div className="flex flex-col h-full">
       <div className="p-6 border-b">
-        <h2 className="text-xl font-semibold">Filter by State</h2>
+        <h2 className="luckiest-guy-regular text-xl font-semibold">Filter by State</h2>
         <p className="text-sm text-muted-foreground mt-1">
           Select a state to filter locations
         </p>

@@ -227,7 +227,7 @@ export default function Categories() {
                         {category.icon}
                       </div>
                       <div>
-                        <CardTitle className="text-xl text-amber-900">
+                        <CardTitle className="text-xl text-amber-900 mt-[50px]">
                           {category.name}
                         </CardTitle>
                         <span
@@ -249,7 +249,7 @@ export default function Categories() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <CardDescription className="text-amber-700 mb-4 min-h-[3rem]">
+                  <CardDescription className="text-white text-lg mb-4 min-h-[3rem]">
                     {category.description || "No description"}
                   </CardDescription>
                   <div className="flex gap-2">
