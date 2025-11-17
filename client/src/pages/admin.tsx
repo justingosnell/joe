@@ -228,6 +228,16 @@ export default function Admin() {
                 <span className="hidden sm:inline">Change Logo</span>
                 <span className="sm:hidden">Logo</span>
               </Button>
+              <Button
+                onClick={() => regeocodeMutation.mutate()}
+                variant="outline"
+                className="flex-1 sm:flex-none"
+                disabled={regeocodeMutation.isPending}
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${regeocodeMutation.isPending ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Fix Markers</span>
+                <span className="sm:hidden">Fix</span>
+              </Button>
               <Button variant="outline" onClick={() => setLocation("/")} className="flex-1 sm:flex-none">
                 <Home className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Home</span>
@@ -297,16 +307,6 @@ export default function Admin() {
                       </CardDescription>
                     </div>
                     <div className="flex gap-2 w-full sm:w-auto">
-                      <Button
-                        onClick={() => regeocodeMutation.mutate()}
-                        variant="outline"
-                        className="flex-1 sm:flex-none"
-                        disabled={regeocodeMutation.isPending}
-                      >
-                        <RefreshCw className={`mr-2 h-4 w-4 ${regeocodeMutation.isPending ? 'animate-spin' : ''}`} />
-                        <span className="hidden sm:inline">Fix Markers</span>
-                        <span className="sm:hidden">Fix</span>
-                      </Button>
                       <Button onClick={() => setIsBulkUploadOpen(true)} variant="outline" className="flex-1 sm:flex-none">
                         <FileUp className="mr-2 h-4 w-4" />
                         <span className="hidden sm:inline">Bulk Upload</span>
