@@ -1078,12 +1078,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/locations/:id", requireAuth, async (req: Request, res: Response) => {
     try {
       const updates = insertLocationSchema.partial().parse(req.body);
+
+      // Re-geocode if city or state changed and coordinates are not manually set
+      if ((updates.city || updates.state) &&
+          (!updates.latitude || updates.latitude === 0) &&
+          (!updates.longitude || updates.longitude === 0)) {
+        const existingLocation = await storage.getLocation(req.params.id);
+        if (existingLocation) {
+          const city = updates.city || existingLocation.city;
+          const state = updates.state || existingLocation.state;
+          if (city && state) {
+            const geocoded = await geocodeLocation(city, state);
+            if (geocoded) {
+              updates.latitude = geocoded.latitude;
+              updates.longitude = geocoded.longitude;
+              console.log(`✅ Re-geocoded updated location: ${updates.name || existingLocation.name} → (${geocoded.latitude}, ${geocoded.longitude})`);
+            }
+          }
+        }
+      }
+
       const location = await storage.updateLocation(req.params.id, updates);
-      
+
       if (!location) {
         return res.status(404).json({ message: "Location not found" });
       }
-      
+
       res.json(location);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1117,7 +1137,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get all locations
       const locations = await storage.getAllLocations();
-      const { isValidUSCoordinates, geocodeLocation } = await import("./geocoding");
+      const { isValidUSCoordinates, geocodeLocation, clearGeocodeCache } = await import("./geocoding");
+      
+      // Clear cache to ensure fresh geocoding
+      clearGeocodeCache();
 
       const invalidLocations = locations.filter(loc =>
         !isValidUSCoordinates(loc.latitude || 0, loc.longitude || 0)

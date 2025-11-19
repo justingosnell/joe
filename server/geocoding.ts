@@ -14,24 +14,8 @@ async function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export async function geocodeLocation(
-  city: string,
-  state: string,
-  country: string = "USA"
-): Promise<{ latitude: number; longitude: number } | null> {
+async function tryGeocodeQuery(query: string): Promise<{ latitude: number; longitude: number } | null> {
   try {
-    // Create cache key
-    const cacheKey = `${city}|${state}|${country}`.toLowerCase();
-    
-    // Check cache first
-    if (CACHE.has(cacheKey)) {
-      const cached = CACHE.get(cacheKey);
-      if (cached) {
-        console.log(`✓ Cache hit for ${city}, ${state}`);
-        return cached;
-      }
-    }
-
     // Rate limiting - wait if needed
     const timeSinceLastRequest = Date.now() - lastRequestTime;
     if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
@@ -40,18 +24,17 @@ export async function geocodeLocation(
 
     lastRequestTime = Date.now();
 
-    // Build query
-    const query = `${city}, ${state}, ${country}`;
     const url = new URL(NOMINATIM_URL);
     url.searchParams.append("q", query);
     url.searchParams.append("format", "json");
     url.searchParams.append("limit", "1");
+    url.searchParams.append("countrycodes", "us"); // Restrict to US
 
-    console.log(`🌍 Geocoding: ${query}`);
+    console.log(`🌍 Trying geocoding query: ${query}`);
 
     const response = await fetch(url.toString(), {
       headers: {
-        "User-Agent": "RoadsideMap/1.0", // Nominatim requires a User-Agent
+        "User-Agent": "RoadsideMap/1.0",
       },
     });
 
@@ -76,16 +59,64 @@ export async function geocodeLocation(
         coords.latitude >= -90 &&
         coords.latitude <= 90 &&
         coords.longitude >= -180 &&
-        coords.longitude <= 180
+        coords.longitude <= 180 &&
+        isValidUSCoordinates(coords.latitude, coords.longitude)
       ) {
-        // Cache the result
-        CACHE.set(cacheKey, coords);
         console.log(`✅ Geocoded ${query}: (${coords.latitude}, ${coords.longitude})`);
         return coords;
+      } else {
+        console.warn(`⚠️ Invalid coordinates for ${query}: (${coords.latitude}, ${coords.longitude}) - not in valid US bounds`);
       }
     }
 
-    console.warn(`⚠️ No geocoding results for ${query}`);
+    return null;
+  } catch (error) {
+    console.error(`❌ Geocoding error for query ${query}:`, error);
+    return null;
+  }
+}
+
+export async function geocodeLocation(
+  city: string,
+  state: string,
+  country: string = "USA"
+): Promise<{ latitude: number; longitude: number } | null> {
+  if (!city?.trim() || !state?.trim()) {
+    console.warn(`⚠️ Missing city or state for geocoding: city="${city}", state="${state}"`);
+    return null;
+  }
+
+  try {
+    // Create cache key
+    const cacheKey = `${city}|${state}|${country}`.toLowerCase();
+
+    // Check cache first
+    if (CACHE.has(cacheKey)) {
+      const cached = CACHE.get(cacheKey);
+      if (cached) {
+        console.log(`✓ Cache hit for ${city}, ${state}`);
+        return cached;
+      }
+    }
+
+    // Try multiple query formats in order of preference
+    const queries = [
+      `${city}, ${state}, ${country}`,           // Full format
+      `${city}, ${state}`,                       // City, State
+      `${city} ${state}`,                        // City State (no comma)
+      `${state}, ${country}`,                    // State, Country (fallback)
+    ];
+
+    for (const query of queries) {
+      const result = await tryGeocodeQuery(query);
+      if (result) {
+        // Cache the result
+        CACHE.set(cacheKey, result);
+        return result;
+      }
+    }
+
+    console.warn(`⚠️ No valid geocoding results found for ${city}, ${state} after trying ${queries.length} queries`);
     return null;
   } catch (error) {
     console.error(`❌ Geocoding error for ${city}, ${state}:`, error);
