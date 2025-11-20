@@ -33,17 +33,23 @@ export function MediaLibrary({ open, onOpenChange, onSelect, mode = "select" }: 
   const [selectedTab, setSelectedTab] = useState<"library" | "upload">("library");
 
   // Fetch all media
-  const { data: allMedia = [], isLoading } = useQuery<Media[]>({
+  const { data: allMedia = [], isLoading, error } = useQuery<Media[]>({
     queryKey: ["media"],
     queryFn: async () => {
+      console.log("Fetching media from:", getApiUrl("/api/media"));
       const response = await fetch(getApiUrl("/api/media"), {
         credentials: "include",
       });
+      console.log("Media fetch response status:", response.status);
       if (!response.ok) throw new Error("Failed to fetch media");
-      return response.json();
+      const data = await response.json();
+      console.log("Media fetched:", data.length, "items");
+      return data;
     },
     enabled: open,
   });
+  
+  console.log("MediaLibrary - isLoading:", isLoading, "allMedia length:", allMedia.length, "error:", error);
 
   // Filter media based on search
   const filteredMedia = allMedia.filter((media) => {
@@ -307,6 +313,10 @@ export function MediaLibrary({ open, onOpenChange, onSelect, mode = "select" }: 
               {isLoading ? (
                 <div className="text-center py-8 text-muted-foreground">
                   Loading media...
+                </div>
+              ) : error ? (
+                <div className="text-center py-8 text-red-500">
+                  Error loading media: {error instanceof Error ? error.message : String(error)}
                 </div>
               ) : filteredMedia.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
