@@ -173,6 +173,9 @@ export function LocationDialog({
   }, [open, location, categoryOptions]);
 
   const handleSubmit = (data: InsertLocation) => {
+    console.log("Form submitted with data:", data);
+    console.log("Form validation state:", form.formState);
+    
     // Convert custom fields array to JSON string
     const customFieldsObj: Record<string, string> = {};
     customFields.forEach((field) => {
@@ -186,6 +189,7 @@ export function LocationDialog({
       customFields: JSON.stringify(customFieldsObj),
     };
     
+    console.log("Submitting data:", submitData);
     onSubmit(submitData);
   };
 
@@ -294,7 +298,12 @@ export function LocationDialog({
         <div className="flex-1 overflow-y-auto px-6 pb-6 min-h-0">
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form 
+            onSubmit={form.handleSubmit(handleSubmit, (errors) => {
+              console.error("Form validation errors:", errors);
+            })} 
+            className="space-y-4">
+          
             <FormField
               control={form.control}
               name="name"

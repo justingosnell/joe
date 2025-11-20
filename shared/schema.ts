@@ -46,6 +46,8 @@ export const locations = pgTable("locations", {
 export const insertLocationSchema = createInsertSchema(locations).omit({
   id: true,
 }).extend({
+  city: z.string().min(1, "City is required"),
+  state: z.string().min(1, "State is required"),
   latitude: z.number().optional().default(0),
   longitude: z.number().optional().default(0),
   customFields: z.string().optional().default("{}"),
