@@ -49,6 +49,8 @@ export const insertLocationSchema = createInsertSchema(locations).omit({
   latitude: z.number().optional().default(0),
   longitude: z.number().optional().default(0),
   customFields: z.string().optional().default("{}"),
+  photoUrl: z.string().optional().default(""),
+  photoId: z.string().optional().default(""),
 });
 
 export type InsertLocation = z.infer<typeof insertLocationSchema>;

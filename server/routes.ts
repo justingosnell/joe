@@ -1052,6 +1052,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertLocationSchema.parse(req.body);
 
+      // Validate required fields for geocoding
+      const city = (validatedData.city || "").trim();
+      const state = (validatedData.state || "").trim();
+      
+      if (!city) {
+        return res.status(400).json({
+          message: "City is required to create a location."
+        });
+      }
+      
+      if (!state) {
+        return res.status(400).json({
+          message: "State is required to create a location."
+        });
+      }
+
       // Check if coordinates are missing or invalid
       const hasValidCoords = validatedData.latitude !== undefined &&
                             validatedData.longitude !== undefined &&
@@ -1060,15 +1076,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
                             isValidUSCoordinates(validatedData.latitude, validatedData.longitude);
 
       if (!hasValidCoords) {
-        // Try to geocode the location
-        const geocoded = await geocodeLocation(validatedData.city, validatedData.state);
+        console.log(`➡️ LOG 1: Attempting to geocode: city="${city}" | state="${state}"`);
+        const geocoded = await geocodeLocation(city, state);
+        console.log(`➡️ LOG 2: Geocoding result:`, geocoded);
+        
         if (geocoded) {
           validatedData.latitude = geocoded.latitude;
           validatedData.longitude = geocoded.longitude;
           console.log(`✅ Auto-geocoded location: ${validatedData.name} → (${geocoded.latitude}, ${geocoded.longitude})`);
         } else {
+          console.error(`❌ Geocoding failed for ${city}, ${state}`);
           return res.status(400).json({
-            message: "Unable to geocode location. Please provide valid coordinates or check city/state spelling."
+            message: "Unable to find coordinates for this city and state. Please verify the spelling and try again, or provide coordinates manually."
           });
         }
       }
@@ -1095,8 +1114,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (!updates.longitude || updates.longitude === 0)) {
         const existingLocation = await storage.getLocation(req.params.id);
         if (existingLocation) {
-          const city = updates.city || existingLocation.city;
-          const state = updates.state || existingLocation.state;
+          const city = (updates.city || existingLocation.city || "").trim();
+          const state = (updates.state || existingLocation.state || "").trim();
           if (city && state) {
             const geocoded = await geocodeLocation(city, state);
             if (geocoded) {
@@ -1173,7 +1192,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           console.log(`🔄 Re-geocoding: ${location.name} (${location.city}, ${location.state})`);
 
-          const geocoded = await geocodeLocation(location.city || "", location.state);
+          const trimmedCity = (location.city || "").trim();
+          const trimmedState = (location.state || "").trim();
+          const geocoded = await geocodeLocation(trimmedCity, trimmedState);
           if (geocoded) {
             await storage.updateLocation(location.id, {
               latitude: geocoded.latitude,
@@ -1367,8 +1388,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let finalLongitude = longitude || 0;
 
           if (!hasValidCoords) {
-            // Try to geocode the location
-            const geocoded = await geocodeLocation(city, state);
+            // Try to geocode the location with trimmed city/state
+            const trimmedCity = (city || "").trim();
+            const trimmedState = (state || "").trim();
+            const geocoded = await geocodeLocation(trimmedCity, trimmedState);
             if (geocoded) {
               finalLatitude = geocoded.latitude;
               finalLongitude = geocoded.longitude;

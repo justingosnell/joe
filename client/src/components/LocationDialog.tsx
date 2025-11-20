@@ -343,13 +343,13 @@ export function LocationDialog({
                 name="state"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>State</FormLabel>
+                    <FormLabel>State <span className="text-red-500">*</span></FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
-                      value={field.value}
+                      value={field.value || ""}
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className={!field.value ? "text-muted-foreground" : ""}>
                           <SelectValue placeholder="Select state" />
                         </SelectTrigger>
                       </FormControl>
@@ -361,6 +361,7 @@ export function LocationDialog({
                         ))}
                       </SelectContent>
                     </Select>
+                    <FormDescription>Required for geocoding</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -373,9 +374,9 @@ export function LocationDialog({
                 name="city"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>City</FormLabel>
+                    <FormLabel>City <span className="text-red-500">*</span></FormLabel>
                     <FormControl>
-                      <Input {...field} value={field.value ?? ""} />
+                      <Input {...field} value={field.value ?? ""} placeholder="Required for geocoding" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
