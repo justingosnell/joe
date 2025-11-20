@@ -6,7 +6,7 @@ import helmet from "helmet";
 import { storage, ensureStorageReady } from "./storage";
 import { runMigrations, initializeDatabase } from "./db";
 import { uploadFileToSupabase, getPublicUrl } from "./supabase-client";
-import { geocodeLocation } from "./geocoding";
+import { geocodeLocation, isValidUSCoordinates } from "./geocoding";
 import bcrypt from "bcrypt";
 import { insertLocationSchema } from "@shared/schema";
 import { z } from "zod";
@@ -1051,18 +1051,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/locations", requireAuth, async (req: Request, res: Response) => {
     try {
       const validatedData = insertLocationSchema.parse(req.body);
-      
-      // Auto-geocode if coordinates are missing (0,0)
-      if ((validatedData.latitude === 0 || validatedData.latitude === undefined) && 
-          (validatedData.longitude === 0 || validatedData.longitude === undefined)) {
+
+      // Check if coordinates are missing or invalid
+      const hasValidCoords = validatedData.latitude !== undefined &&
+                            validatedData.longitude !== undefined &&
+                            validatedData.latitude !== 0 &&
+                            validatedData.longitude !== 0 &&
+                            isValidUSCoordinates(validatedData.latitude, validatedData.longitude);
+
+      if (!hasValidCoords) {
+        // Try to geocode the location
         const geocoded = await geocodeLocation(validatedData.city, validatedData.state);
         if (geocoded) {
           validatedData.latitude = geocoded.latitude;
           validatedData.longitude = geocoded.longitude;
           console.log(`✅ Auto-geocoded location: ${validatedData.name} → (${geocoded.latitude}, ${geocoded.longitude})`);
+        } else {
+          return res.status(400).json({
+            message: "Unable to geocode location. Please provide valid coordinates or check city/state spelling."
+          });
         }
       }
-      
+
       const location = await storage.createLocation(validatedData);
       res.status(201).json(location);
     } catch (error) {
@@ -1339,13 +1349,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
 
-          // Validate coordinates if provided (not 0,0)
-          if ((latitude !== 0 || longitude !== 0) && !validateCoordinates(latitude, longitude)) {
-            results.failed++;
-            results.errors.push(`Line ${lineNum + 1}: Invalid coordinates (${latitude}, ${longitude}) - Latitude must be -90 to 90, Longitude must be -180 to 180`);
-            continue;
-          }
-
           // Prepare metadata for migration tracking
           const customFields = JSON.stringify({
             _migrated_at: new Date().toISOString(),
@@ -1353,17 +1356,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             _source: 'bulk_upload',
           });
 
-          // Create location with validated data
+          // Check if coordinates are missing or invalid
+          const hasValidCoords = latitude !== undefined &&
+                                longitude !== undefined &&
+                                latitude !== 0 &&
+                                longitude !== 0 &&
+                                isValidUSCoordinates(latitude, longitude);
+
           let finalLatitude = latitude || 0;
           let finalLongitude = longitude || 0;
 
-          // Auto-geocode if coordinates are missing (0,0)
-          if ((finalLatitude === 0 && finalLongitude === 0) || (latitude === 0 && longitude === 0)) {
+          if (!hasValidCoords) {
+            // Try to geocode the location
             const geocoded = await geocodeLocation(city, state);
             if (geocoded) {
               finalLatitude = geocoded.latitude;
               finalLongitude = geocoded.longitude;
               console.log(`✅ Line ${lineNum + 1}: Auto-geocoded "${name}" → (${finalLatitude}, ${finalLongitude})`);
+            } else {
+              results.failed++;
+              results.errors.push(`Line ${lineNum + 1}: Unable to geocode location "${name}". Please provide valid coordinates or check city/state spelling.`);
+              continue;
             }
           }
 
