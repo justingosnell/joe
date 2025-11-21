@@ -2,6 +2,8 @@ import express, { type Express, type Request, type Response } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import PostgresStore from "connect-pg-simple";
+import { Pool } from "pg";
 import helmet from "helmet";
 import { storage, ensureStorageReady } from "./storage";
 import { runMigrations, initializeDatabase } from "./db";
@@ -142,24 +144,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Session configuration
   const isProduction = process.env.NODE_ENV === 'production';
+  
+  let sessionStore: any;
+  if (isProduction && process.env.DATABASE_URL) {
+    // Use PostgreSQL session store in production
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+    });
+    sessionStore = new (PostgresStore(session))({
+      pool: pool,
+      tableName: 'session',
+    });
+    console.log("💾 Using PostgreSQL session store");
+  } else {
+    // Use in-memory store for development
+    sessionStore = new MemoryStore({
+      checkPeriod: 86400000,
+    });
+    console.log("💾 Using in-memory session store");
+  }
+  
   app.use(
     session({
-      store: new MemoryStore({
-        checkPeriod: 86400000, // Prune expired entries every 24h
-      }),
+      store: sessionStore,
       secret: process.env.SESSION_SECRET || "roadside-mapper-secret-key-change-in-production",
       resave: false,
       saveUninitialized: false,
       cookie: {
-        secure: isProduction, // Required for HTTPS in production
+        secure: isProduction,
         httpOnly: true,
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+        maxAge: 1000 * 60 * 60 * 24 * 7,
         sameSite: 'lax',
       },
     })
   );
   
-  console.log("🍪 Session config:", { secure: isProduction, httpOnly: true, sameSite: 'lax' });
+  console.log("🍪 Session config:", { secure: isProduction, store: isProduction ? 'PostgreSQL' : 'Memory', httpOnly: true, sameSite: 'lax' });
 
   // ============ Health Check Endpoint (for uptime monitoring) ============
   app.get("/health", (req: Request, res: Response) => {
@@ -1156,10 +1176,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           validatedData.longitude = geocoded.longitude;
           console.log(`✅ Auto-geocoded location: ${validatedData.name} → (${geocoded.latitude}, ${geocoded.longitude})`);
         } else {
-          console.error(`❌ Geocoding failed for ${city}, ${state}`);
-          return res.status(400).json({
-            message: "Unable to find coordinates for this city and state. Please verify the spelling and try again, or provide coordinates manually."
-          });
+          // Geocoding failed - allow creation with 0,0 as placeholder
+          console.warn(`⚠️ Geocoding failed for ${city}, ${state} - allowing creation with placeholder coordinates`);
+          validatedData.latitude = 0;
+          validatedData.longitude = 0;
         }
       }
 
