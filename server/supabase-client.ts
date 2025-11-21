@@ -4,9 +4,15 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 const supabaseBucket = process.env.SUPABASE_BUCKET;
 
+console.log("🔑 Supabase initialization:", {
+  url: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : "MISSING",
+  key: supabaseKey ? "✓ SET" : "MISSING",
+  bucket: supabaseBucket || "MISSING",
+});
+
 if (!supabaseUrl || !supabaseKey) {
   throw new Error(
-    "Missing SUPABASE_URL or SUPABASE_KEY environment variables"
+    `Missing SUPABASE_URL (${supabaseUrl ? "✓" : "✗"}) or SUPABASE_KEY (${supabaseKey ? "✓" : "✗"}) environment variables`
   );
 }
 
@@ -38,5 +44,9 @@ export async function uploadFileToSupabase(
 
 export function getPublicUrl(bucket: string, path: string): string {
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+  console.log("🔗 Public URL generated:", {
+    input: { bucket, path: path.substring(0, 30) },
+    output: data.publicUrl.substring(0, 50),
+  });
   return data.publicUrl;
 }

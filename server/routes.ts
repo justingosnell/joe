@@ -49,7 +49,13 @@ declare module "express-session" {
 
 // Middleware to check if user is authenticated
 function requireAuth(req: Request, res: Response, next: Function) {
+  console.log("🔐 Auth check:", {
+    sessionId: req.sessionID,
+    userId: req.session.userId,
+    cookies: req.headers.cookie ? "✓" : "✗",
+  });
   if (!req.session.userId) {
+    console.log("❌ Auth failed - no userId in session");
     return res.status(401).json({ message: "Unauthorized" });
   }
   next();
@@ -135,6 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve uploaded files statically
 
   // Session configuration
+  const isProduction = process.env.NODE_ENV === 'production';
   app.use(
     session({
       store: new MemoryStore({
@@ -144,13 +151,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       resave: false,
       saveUninitialized: false,
       cookie: {
-        secure: false, // Set to true only if using HTTPS
+        secure: isProduction, // Required for HTTPS in production
         httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
         sameSite: 'lax',
       },
     })
   );
+  
+  console.log("🍪 Session config:", { secure: isProduction, httpOnly: true, sameSite: 'lax' });
 
   // ============ Health Check Endpoint (for uptime monitoring) ============
   app.get("/health", (req: Request, res: Response) => {
@@ -204,12 +213,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.resetFailedLogins(user.id);
 
       req.session.userId = user.id;
+      console.log("✅ Session userId set:", { userId: user.id, sessionID: req.sessionID });
       
       // Save session before sending response to ensure it's persisted
       await new Promise<void>((resolve, reject) => {
         req.session.save((err) => {
-          if (err) reject(err);
-          else resolve();
+          if (err) {
+            console.error("❌ Session save error:", err);
+            reject(err);
+          } else {
+            console.log("✅ Session saved:", { sessionID: req.sessionID });
+            resolve();
+          }
         });
       });
       
@@ -831,6 +846,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         message: `Fixed ${fixedCount} broken URLs`,
+        fixedCount,
+        remainingCount: allMedia.length - fixedCount,
+      });
+    } catch (error) {
+      console.error("❌ Fix error:", error);
+      const errorMsg = error instanceof Error ? error.message : "Fix failed";
+      res.status(500).json({ message: errorMsg });
+    }
+  });
+
+  // Fix media URLs with empty subdomain (https://.supabase.co/...)
+  app.post("/api/admin/fix-empty-subdomain-urls", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const allMedia = await storage.getAllMedia();
+      
+      // Find entries with .supabase.co but missing subdomain
+      const brokenMedia = allMedia.filter(m => m.url.includes("://.supabase.co/"));
+      console.log(`🔍 Found ${brokenMedia.length} media entries with empty subdomain URLs`);
+      
+      if (brokenMedia.length === 0) {
+        return res.json({
+          message: "No empty subdomain URLs found in media",
+          fixedCount: 0,
+        });
+      }
+      
+      const supabaseUrl = process.env.SUPABASE_URL || "https://fpaxndekwubupxlubvxj.supabase.co";
+      const bucket = process.env.SUPABASE_BUCKET || "imageStore";
+      
+      let fixedCount = 0;
+      for (const item of brokenMedia) {
+        // Extract the storage path from the broken URL
+        // From: https://.supabase.co/storage/v1/object/public/imageStore/media/...
+        // Extract: media/...
+        const storagePathMatch = item.url.match(/media\/.*$/);
+        if (!storagePathMatch) {
+          console.log(`⚠️  Could not extract storage path from: ${item.url}`);
+          continue;
+        }
+        
+        const storagePath = storagePathMatch[0];
+        const fixedUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${storagePath}`;
+        
+        try {
+          const updated = await storage.updateMedia(item.id, { url: fixedUrl });
+          if (updated) fixedCount++;
+          console.log(`✓ Fixed: ${item.originalName} -> ${fixedUrl.substring(0, 60)}...`);
+        } catch (error) {
+          console.error(`✗ Failed to fix ${item.id}:`, error);
+        }
+      }
+      
+      console.log(`✅ Fixed ${fixedCount} media URLs with empty subdomain!`);
+      
+      res.json({
+        message: `Fixed ${fixedCount} media URLs`,
         fixedCount,
         remainingCount: allMedia.length - fixedCount,
       });
