@@ -18,6 +18,12 @@ process.on("unhandledRejection", (reason, promise) => {
 
 const app = express();
 
+// Trust proxy headers from Render.com (required for secure cookies on HTTPS)
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+  console.log("🔒 Trust proxy enabled for production");
+}
+
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   const allowedOrigins = [
