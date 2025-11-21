@@ -31,6 +31,7 @@ async function tryGeocodeQuery(query: string): Promise<{ latitude: number; longi
     url.searchParams.append("countrycodes", "us"); // Restrict to US
 
     console.log(`🌍 Trying geocoding query: ${query}`);
+    console.log(`   URL: ${url.toString()}`);
 
     const response = await fetch(url.toString(), {
       headers: {
@@ -38,12 +39,15 @@ async function tryGeocodeQuery(query: string): Promise<{ latitude: number; longi
       },
     });
 
+    console.log(`   Response status: ${response.status}`);
+
     if (!response.ok) {
       console.warn(`⚠️ Geocoding API error: ${response.status} for ${query}`);
       return null;
     }
 
     const results = await response.json();
+    console.log(`   Results count: ${Array.isArray(results) ? results.length : 'not array'}`);
 
     if (Array.isArray(results) && results.length > 0) {
       const result = results[0];
@@ -51,6 +55,9 @@ async function tryGeocodeQuery(query: string): Promise<{ latitude: number; longi
         latitude: parseFloat(result.lat),
         longitude: parseFloat(result.lon),
       };
+      
+      console.log(`   Raw coords: (${coords.latitude}, ${coords.longitude})`);
+      console.log(`   US bounds check: ${isValidUSCoordinates(coords.latitude, coords.longitude)}`);
 
       // Validate coordinates
       if (
@@ -67,6 +74,8 @@ async function tryGeocodeQuery(query: string): Promise<{ latitude: number; longi
       } else {
         console.warn(`⚠️ Invalid coordinates for ${query}: (${coords.latitude}, ${coords.longitude}) - not in valid US bounds`);
       }
+    } else {
+      console.log(`   No results in array for query: ${query}`);
     }
 
     return null;
