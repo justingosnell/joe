@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/api";
-import { LogOut, Plus, MapPin, Search, X, Image as ImageIcon, Upload, FileUp, FolderTree, Home, RefreshCw } from "lucide-react";
+import { LogOut, Plus, MapPin, Search, X, Image as ImageIcon, Upload, FileUp, FolderTree, Home, RefreshCw, ArrowUp } from "lucide-react";
 import { LocationTable } from "@/components/LocationTable";
 import { LocationDialog } from "@/components/LocationDialog";
 import { MediaLibraryPanel } from "@/components/MediaLibraryPanel";
@@ -29,6 +29,24 @@ export default function Admin() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [selectedTab, setSelectedTab] = useState<"locations" | "categories" | "media">("locations");
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      console.log("Scroll Y:", window.scrollY, "Show button:", window.scrollY > 300);
+      setShowScrollTop(window.scrollY > 300);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
 
   // Fetch locations
   const { data: allLocations = [], isLoading } = useQuery<Location[]>({
@@ -419,6 +437,18 @@ export default function Admin() {
         location={selectedLocation}
         onClose={() => setSelectedLocation(null)}
       />
+
+      {/* Scroll to Top Button */}
+      {showScrollTop && (
+        <Button
+          onClick={scrollToTop}
+          size="icon"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 rounded-full shadow-lg"
+          title="Scroll to top"
+        >
+          <ArrowUp className="h-5 w-5" />
+        </Button>
+      )}
     </div>
   );
 }

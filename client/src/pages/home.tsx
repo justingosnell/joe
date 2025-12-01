@@ -106,7 +106,7 @@ export default function Home() {
         {/* Hero Section */}
         <section className="text-center mb-12 py-8 px-6 rounded-lg bg-card border border-border">
           <p className="text-xl text-foreground mb-8 max-w-2xl mx-auto">
-            Discover America's most peculiar landmarks, oversized oddities, and forgotten wonders
+            Discover America's most peculiar landmarks, Colossal Objects, and Roadside Relics
           </p>
           
           {/* Stats */}
@@ -185,7 +185,7 @@ export default function Home() {
                         >
                           {collection.title}
                         </CardTitle>
-                        <CardDescription style={{ color: textColor, opacity: 0.8 }} className="text-xs line-clamp-1">
+                        <CardDescription style={{ color: "#fff", opacity: 0.8 }} className="text-sm line-clamp-3">
                           {collection.description}
                         </CardDescription>
                       </div>

@@ -23,27 +23,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [, setLocation] = useLocation();
 
-  const checkAuth = async () => {
+  const checkAuth = async (skipLoadingUpdate: boolean = false) => {
     try {
+      console.log("🔍 Checking auth...");
       const response = await fetch(getApiUrl("/api/auth/me"), {
         credentials: "include",
       });
 
+      console.log("✅ Auth check response status:", response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log("✅ Auth check success, user:", data.user);
         setUser(data.user);
       } else {
+        console.log("❌ Auth check failed, status:", response.status);
+        const errorData = await response.json().catch(() => ({}));
+        console.log("Error details:", errorData);
         setUser(null);
       }
     } catch (error) {
-      console.error("Auth check failed:", error);
+      console.error("Auth check error:", error);
       setUser(null);
     } finally {
-      setIsLoading(false);
+      if (!skipLoadingUpdate) {
+        setIsLoading(false);
+      }
     }
   };
 
   const login = async (username: string, password: string) => {
+    console.log("🔐 Attempting login for user:", username);
     const response = await fetch(getApiUrl("/api/auth/login"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -51,17 +61,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       credentials: "include",
     });
 
+    console.log("📡 Login response status:", response.status);
+    
     if (!response.ok) {
       const data = await response.json();
+      console.error("❌ Login failed:", data.message);
       throw new Error(data.message || "Login failed");
     }
 
     const data = await response.json();
+    console.log("✅ Login successful, user data:", data.user);
     setUser(data.user);
     
-    // Verify session is established before redirecting
-    await checkAuth();
-    
+    // Wait for auth check to verify session is established before redirecting
+    // Skip loading update since we already have the user data
+    console.log("🔄 Verifying session...");
+    await checkAuth(true);
+    console.log("✅ Session verified, redirecting to /admin");
     setLocation("/admin");
   };
 

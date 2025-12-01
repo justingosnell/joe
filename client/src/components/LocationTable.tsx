@@ -102,7 +102,10 @@ export function LocationTable({ locations, onEdit, onDelete, onLocationClick }: 
                   </div>
                 </TableCell>
                 <TableCell className="hidden lg:table-cell text-sm whitespace-nowrap">
-                  {new Date(location.taggedDate).toLocaleDateString()}
+                  {location.taggedDate ? (() => {
+                    const [year, month, day] = location.taggedDate.split('-');
+                    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleDateString();
+                  })() : '-'}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">

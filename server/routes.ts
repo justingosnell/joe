@@ -116,6 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize multer
   await initMulter();
   
+  
   // Security: Add Helmet middleware to prevent XSS, clickjacking, and other attacks
   // This sets various HTTP headers for security
   app.use(helmet({
@@ -1089,6 +1090,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const searchQuery = req.query.search as string | undefined;
       let locations = await storage.getAllLocations();
       
+      console.log(`📍 Fetched ${locations.length} total locations from database`);
+      
       // If search query is provided, filter locations
       if (searchQuery && searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
@@ -1113,8 +1116,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           return nameMatch || categoryMatch || stateMatch || customFieldsMatch;
         });
+        console.log(`🔍 Search query "${query}" returned ${locations.length} results`);
       }
       
+      console.log(`📤 Sending ${locations.length} locations to client`);
       res.json(locations);
     } catch (error) {
       console.error("Get locations error:", error);
@@ -1171,15 +1176,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const geocoded = await geocodeLocation(city, state);
         console.log(`➡️ LOG 2: Geocoding result:`, geocoded);
         
-        if (geocoded) {
+        if (geocoded && isValidUSCoordinates(geocoded.latitude, geocoded.longitude)) {
           validatedData.latitude = geocoded.latitude;
           validatedData.longitude = geocoded.longitude;
           console.log(`✅ Auto-geocoded location: ${validatedData.name} → (${geocoded.latitude}, ${geocoded.longitude})`);
         } else {
-          // Geocoding failed - allow creation with 0,0 as placeholder
-          console.warn(`⚠️ Geocoding failed for ${city}, ${state} - allowing creation with placeholder coordinates`);
-          validatedData.latitude = 0;
-          validatedData.longitude = 0;
+          return res.status(400).json({
+            message: `Could not find valid coordinates for ${city}, ${state}. Please verify the city and state spelling and try again.`
+          });
         }
       }
 
@@ -1209,10 +1213,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const state = (updates.state || existingLocation.state || "").trim();
           if (city && state) {
             const geocoded = await geocodeLocation(city, state);
-            if (geocoded) {
+            if (geocoded && isValidUSCoordinates(geocoded.latitude, geocoded.longitude)) {
               updates.latitude = geocoded.latitude;
               updates.longitude = geocoded.longitude;
               console.log(`✅ Re-geocoded updated location: ${updates.name || existingLocation.name} → (${geocoded.latitude}, ${geocoded.longitude})`);
+            } else {
+              return res.status(400).json({
+                message: `Could not find valid coordinates for ${city}, ${state}. Please verify the city and state spelling and try again.`
+              });
             }
           }
         }
@@ -1286,7 +1294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const trimmedCity = (location.city || "").trim();
           const trimmedState = (location.state || "").trim();
           const geocoded = await geocodeLocation(trimmedCity, trimmedState);
-          if (geocoded) {
+          if (geocoded && isValidUSCoordinates(geocoded.latitude, geocoded.longitude)) {
             await storage.updateLocation(location.id, {
               latitude: geocoded.latitude,
               longitude: geocoded.longitude,
@@ -1307,7 +1315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               coords: { lat: location.latitude, lng: location.longitude },
               status: "failed_to_geocode"
             });
-            console.warn(`⚠️ Failed to re-geocode ${location.name}`);
+            console.warn(`⚠️ Failed to re-geocode ${location.name} - invalid coordinates or no results`);
           }
         } catch (error) {
           console.error(`❌ Error re-geocoding ${location.name}:`, error);
@@ -1483,7 +1491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const trimmedCity = (city || "").trim();
             const trimmedState = (state || "").trim();
             const geocoded = await geocodeLocation(trimmedCity, trimmedState);
-            if (geocoded) {
+            if (geocoded && isValidUSCoordinates(geocoded.latitude, geocoded.longitude)) {
               finalLatitude = geocoded.latitude;
               finalLongitude = geocoded.longitude;
               console.log(`✅ Line ${lineNum + 1}: Auto-geocoded "${name}" → (${finalLatitude}, ${finalLongitude})`);

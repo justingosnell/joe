@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
-import { Maximize2, Minimize2, MapIcon } from "lucide-react";
+import { Maximize2, Minimize2, MapIcon, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -136,7 +136,7 @@ function InteractiveMap({
 }: MapProps & { terrain?: "standard" | "satellite" }) {
   const { getColorBySlug } = useCategoryColors();
 
-  const tileLayerConfig = {
+  const tileLayerConfig: Record<"standard" | "satellite", { url: string; attribution: string }> = {
     standard: {
       url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -305,6 +305,19 @@ export function HomeMapSection() {
                   <SelectItem value="satellite">Satellite</SelectItem>
                 </SelectContent>
               </Select>
+
+              {(category !== "all" || state !== "all") && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setCategory("all");
+                    setState("all");
+                  }}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Clear Filters
+                </Button>
+              )}
             </div>
 
             <Button
@@ -333,9 +346,9 @@ export function HomeMapSection() {
   return (
     <section className="mb-12">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="luckiest-guy-regular text-3xl font-bold text-amber-900 flex items-center gap-2">
+        <h2 className="text-3xl font-bold flex items-center gap-2" style={{ color: '#fff' }}>
           <MapIcon className="h-7 w-7 text-orange-500" />
-          Interactive Map
+          Roadside Map
         </h2>
       </div>
 
@@ -377,6 +390,19 @@ export function HomeMapSection() {
             <SelectItem value="satellite">Satellite</SelectItem>
           </SelectContent>
         </Select>
+
+        {(category !== "all" || state !== "all") && (
+          <Button
+            variant="outline"
+            onClick={() => {
+              setCategory("all");
+              setState("all");
+            }}
+          >
+            <X className="h-4 w-4 mr-2" />
+            Clear Filters
+          </Button>
+        )}
 
         <Button
           variant="outline"

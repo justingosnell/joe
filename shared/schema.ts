@@ -53,6 +53,7 @@ export const insertLocationSchema = createInsertSchema(locations).omit({
   customFields: z.string().optional().default("{}"),
   photoUrl: z.string().optional().default(""),
   photoId: z.string().optional().default(""),
+  taggedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
 });
 
 export type InsertLocation = z.infer<typeof insertLocationSchema>;

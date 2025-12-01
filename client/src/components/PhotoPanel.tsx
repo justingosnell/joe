@@ -44,11 +44,11 @@ export function PhotoPanel({ location, onClose }: PhotoPanelProps) {
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
         {location && (
           <>
-            <div className="relative w-full aspect-video bg-muted">
+            <div className="relative w-full bg-muted" style={{ minHeight: "300px", maxHeight: "500px" }}>
               <img
                 src={location.photoUrl}
                 alt={location.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
                 data-testid="img-location-photo"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -95,11 +95,14 @@ export function PhotoPanel({ location, onClose }: PhotoPanelProps) {
                 <div>
                   <p className="font-medium">Visit Date</p>
                   <p className="text-sm text-muted-foreground" data-testid="text-location-date">
-                    {new Date(location.taggedDate).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    {(() => {
+                      const [year, month, day] = location.taggedDate.split('-');
+                      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day)).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      });
+                    })()}
                   </p>
                 </div>
               </div>

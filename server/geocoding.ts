@@ -28,7 +28,7 @@ async function tryGeocodeQuery(query: string): Promise<{ latitude: number; longi
     url.searchParams.append("q", query);
     url.searchParams.append("format", "json");
     url.searchParams.append("limit", "1");
-    url.searchParams.append("countrycodes", "us"); // Restrict to US
+    url.searchParams.append("countrycodes", "us,ca"); // Restrict to US and Canada
 
     console.log(`🌍 Trying geocoding query: ${query}`);
     console.log(`   URL: ${url.toString()}`);
@@ -143,13 +143,13 @@ export function getGeocodeCache(): Map<string, { latitude: number; longitude: nu
 }
 
 /**
- * Check if coordinates are within reasonable bounds for US locations
+ * Check if coordinates are within reasonable bounds for US/Canada locations
  * This helps detect geocoding errors that place markers in wrong continents
  */
 export function isValidUSCoordinates(latitude: number, longitude: number): boolean {
-  // US continental bounds (with some padding for Alaska/Hawaii)
+  // US and Canada bounds
   const minLat = 18.0;  // Southern Florida
-  const maxLat = 72.0;  // Northern Alaska
+  const maxLat = 84.0;  // Northern Canada
   const minLon = -180.0; // Western Pacific
   const maxLon = -50.0;  // Eastern Atlantic
 
@@ -158,7 +158,7 @@ export function isValidUSCoordinates(latitude: number, longitude: number): boole
     latitude <= maxLat &&
     longitude >= minLon &&
     longitude <= maxLon &&
-    // Exclude obvious non-US locations (e.g., Africa would be around 0,0 to 40,40)
+    // Exclude obvious non-US/Canada locations (e.g., Africa would be around 0,0 to 40,40)
     !(latitude >= -10 && latitude <= 40 && longitude >= -20 && longitude <= 50)
   );
 }
