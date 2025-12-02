@@ -14,7 +14,7 @@ import { LogoSelectorDialog } from "@/components/LogoSelectorDialog";
 import { BulkUploadDialog } from "@/components/BulkUploadDialog";
 import { PhotoPanel } from "@/components/PhotoPanel";
 import { CategoryManagement } from "@/components/CategoryManagement";
-import type { Location, InsertLocation } from "@shared/schema";
+import type { Location, InsertLocation, Media } from "@shared/schema";
 import { useLocation } from "wouter";
 
 export default function Admin() {
@@ -67,6 +67,33 @@ export default function Admin() {
       return response.json();
     },
   });
+
+  // Fetch media for storage calculation
+  const { data: allMedia = [] } = useQuery<Media[]>({
+    queryKey: ["media"],
+    queryFn: async () => {
+      const response = await fetch(getApiUrl("/api/media"));
+      if (!response.ok) throw new Error("Failed to fetch media");
+      return response.json();
+    },
+  });
+
+  // Helper function to format bytes
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+  };
+
+  // Calculate total storage used
+  const totalStorageUsed = useMemo(() => {
+    return allMedia.reduce((total, media) => {
+      const size = parseInt(media.size || "0", 10);
+      return total + size;
+    }, 0);
+  }, [allMedia]);
 
   // Filter locations based on search query
   const locations = useMemo(() => {
@@ -401,7 +428,7 @@ export default function Admin() {
               <div className="mb-4">
                 <h2 className="luckiest-guy-regular text-2xl font-bold">Media Library</h2>
                 <p className="text-sm text-muted-foreground">
-                  Manage your uploaded images and media files
+                  Total storage used: <strong>{formatBytes(totalStorageUsed)}</strong> ({allMedia.length} {allMedia.length === 1 ? "file" : "files"})
                 </p>
               </div>
             </div>
