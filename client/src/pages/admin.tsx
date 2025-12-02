@@ -319,7 +319,7 @@ export default function Admin() {
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
-                      <CardTitle>Location Management</CardTitle>
+                      <CardTitle className="luckiest-guy-regular">Location Management</CardTitle>
                       <CardDescription>
                         Manage all roadside attraction locations
                       </CardDescription>
