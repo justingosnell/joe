@@ -234,7 +234,7 @@ export default function Admin() {
                 <MapPin className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-xl sm:text-2xl font-bold">Joe's Dashboard</h1>
+                <h1 className="text-xl sm:text-2xl font-bold luckiest-guy-regular">Joe's Dashboard</h1>
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   Logged in as <strong>{user?.username}</strong>
                 </p>
