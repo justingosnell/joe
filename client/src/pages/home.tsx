@@ -13,6 +13,16 @@ import { CategorySlideshowModal } from "@/components/CategorySlideshowModal";
 import { getApiUrl } from "@/lib/api";
 import type { Location } from "@shared/schema";
 
+const US_STATES = [
+  "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut", "Delaware",
+  "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky",
+  "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri",
+  "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico", "New York",
+  "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island",
+  "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington",
+  "West Virginia", "Wisconsin", "Wyoming"
+];
+
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -87,6 +97,12 @@ export default function Home() {
     ).slice(0, 8);
   }, [locations, searchQuery]);
 
+  // Calculate remaining states (states without attractions)
+  const remainingStates = useMemo(() => {
+    const statesWithAttractions = new Set(locations.filter(loc => US_STATES.includes(loc.state)).map(loc => loc.state));
+    return US_STATES.filter(state => !statesWithAttractions.has(state)).sort();
+  }, [locations]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -105,6 +121,7 @@ export default function Home() {
       <main className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Hero Section */}
         <section className="text-center mb-12 py-8 px-6 rounded-lg bg-card border border-border">
+          <Signpost className="h-16 w-16 mx-auto mb-6 text-primary" />
           <p className="text-xl text-foreground mb-8 max-w-2xl mx-auto">
             Discover America's most peculiar landmarks, Colossal Objects, and Roadside Relics
           </p>
@@ -117,7 +134,7 @@ export default function Home() {
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-primary">
-                {new Set(locations.map(l => l.state)).size}
+                {new Set(locations.filter(l => US_STATES.includes(l.state)).map(l => l.state)).size}
               </div>
               <div className="text-sm text-muted-foreground">States</div>
             </div>
@@ -126,7 +143,7 @@ export default function Home() {
 
         {/* Category Collections */}
         <section className="mb-12">
-          <h2 className="text-3xl font-bold mb-6 text-foreground">Roadside Collections</h2>
+          <h2 className="text-3xl font-bold mb-6 text-foreground luckiest-guy-regular">Roadside Collections</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {categoryCollections.map((collection) => {
               const backgroundImage = (collection as any).backgroundImageUrl;
@@ -185,7 +202,7 @@ export default function Home() {
                         >
                           {collection.title}
                         </CardTitle>
-                        <CardDescription style={{ color: "#fff", opacity: 0.8 }} className="text-sm line-clamp-3">
+                        <CardDescription style={{ color: "#fff", opacity: 0.8, textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)' }} className="text-lg line-clamp-3">
                           {collection.description}
                         </CardDescription>
                       </div>
@@ -227,21 +244,36 @@ export default function Home() {
           <MediaSlideshow />
         </section>
 
-        {/* Call to Action */}
-        <section className="text-center py-12">
+        {/* Remaining States */}
+        <section className="py-12">
           <Card className="border-2 border-primary bg-card shadow-lg">
             <CardHeader>
               <CardTitle className="text-3xl text-foreground">
-                Know of an Offbeat Sight?
+                Remaining States
               </CardTitle>
               <CardDescription className="text-lg text-muted-foreground">
-                Help us document America's roadside wonders. Share your discoveries!
+                States without attractions yet - keep track of where you haven't been
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8">
-                Submit a Tip
-              </Button>
+              {remainingStates.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-lg font-semibold text-primary mb-2">🎉 Complete!</p>
+                  <p className="text-muted-foreground">You've documented attractions in all 50 states!</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {remainingStates.map((state) => (
+                    <Badge 
+                      key={state} 
+                      variant="outline" 
+                      className="px-3 py-2 text-center justify-center text-muted-foreground hover:bg-muted cursor-default"
+                    >
+                      {state}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </section>

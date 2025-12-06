@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { getApiUrl } from "@/lib/api";
 import { LogOut, Plus, MapPin, Search, X, Image as ImageIcon, Upload, FileUp, FolderTree, Home, RefreshCw, ArrowUp } from "lucide-react";
@@ -27,6 +28,7 @@ export default function Admin() {
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedState, setSelectedState] = useState<string>("");
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [selectedTab, setSelectedTab] = useState<"locations" | "categories" | "media">("locations");
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -95,12 +97,24 @@ export default function Admin() {
     }, 0);
   }, [allMedia]);
 
-  // Filter locations based on search query
+  // Get unique states from locations
+  const uniqueStates = useMemo(() => {
+    const states = new Set(allLocations.map(loc => loc.state).filter(Boolean).filter(s => s.trim() !== ''));
+    return Array.from(states).sort();
+  }, [allLocations]);
+
+  // Filter locations based on search query and state filter
   const locations = useMemo(() => {
-    if (!searchQuery.trim()) return allLocations;
+    let filtered = allLocations;
+
+    if (selectedState && selectedState !== "all") {
+      filtered = filtered.filter((location) => location.state === selectedState);
+    }
+
+    if (!searchQuery.trim()) return filtered;
 
     const query = searchQuery.toLowerCase();
-    return allLocations.filter((location) => {
+    return filtered.filter((location) => {
       // Search in basic fields
       if (location.name.toLowerCase().includes(query)) return true;
       if (location.state.toLowerCase().includes(query)) return true;
@@ -120,7 +134,7 @@ export default function Admin() {
 
       return false;
     });
-  }, [allLocations, searchQuery]);
+  }, [allLocations, searchQuery, selectedState]);
 
   // Create location mutation
   const createMutation = useMutation({
@@ -364,32 +378,51 @@ export default function Admin() {
                     </div>
                   </div>
               
-              {/* Search Bar */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search by name, category, state, or custom attributes..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 pr-10"
-                />
-                {searchQuery && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
-                    onClick={() => setSearchQuery("")}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
+              {/* Search and Filter Bar */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Search by name, category, state, or custom attributes..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 pr-10"
+                  />
+                  {searchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
+                      onClick={() => setSearchQuery("")}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                <div className="w-full sm:w-56">
+                  <Select value={selectedState || "all"} onValueChange={setSelectedState}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by state..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All States</SelectItem>
+                      {uniqueStates.map((state) => (
+                        <SelectItem key={state} value={state}>
+                          {state}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               
               {/* Search Results Info */}
-              {searchQuery && (
+              {(searchQuery || selectedState) && (
                 <p className="text-sm text-muted-foreground">
-                  Found {locations.length} location{locations.length !== 1 ? 's' : ''} matching "{searchQuery}"
+                  Found {locations.length} location{locations.length !== 1 ? 's' : ''}
+                  {selectedState && ` in ${selectedState}`}
+                  {searchQuery && ` matching "${searchQuery}"`}
                 </p>
               )}
             </div>

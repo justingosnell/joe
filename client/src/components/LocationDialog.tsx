@@ -304,12 +304,24 @@ export function LocationDialog({
         credentials: "include",
       });
 
-      if (!response.ok) {
-        throw new Error("Upload failed");
+      let errorData: any;
+      try {
+        errorData = await response.json();
+      } catch (parseError) {
+        errorData = null;
       }
 
-      const data = await response.json();
+      if (!response.ok) {
+        const errorMessage = errorData?.message || errorData?.error || `Upload failed (HTTP ${response.status})`;
+        throw new Error(errorMessage);
+      }
+
+      const data = errorData;
       
+      if (!data?.url) {
+        throw new Error("Server response missing image URL");
+      }
+
       form.setValue("photoUrl", data.url);
       setPreviewUrl(data.url);
       
@@ -318,10 +330,11 @@ export function LocationDialog({
         description: "Image uploaded successfully",
       });
     } catch (error) {
-      console.error("Upload error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to upload image";
+      console.error("Upload error:", errorMessage, error);
       toast({
         title: "Upload failed",
-        description: "Failed to upload image. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

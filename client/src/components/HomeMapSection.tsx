@@ -346,7 +346,7 @@ export function HomeMapSection() {
   return (
     <section className="mb-12">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-3xl font-bold flex items-center gap-2" style={{ color: '#fff' }}>
+        <h2 className="text-3xl font-bold flex items-center gap-2 luckiest-guy-regular" style={{ color: '#fff' }}>
           <MapIcon className="h-7 w-7 text-orange-500" />
           Roadside Map
         </h2>

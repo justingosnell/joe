@@ -127,7 +127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://unpkg.com"],
         imgSrc: ["'self'", "data:", "https:", "blob:"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        connectSrc: ["'self'", "https:"],
+        connectSrc: ["'self'", "https:", "ws://localhost:3000", "wss:"],
         frameSrc: ["'self'"],
         objectSrc: ["'none'"],
       },
@@ -729,7 +729,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Now stores images in database like the new /api/media endpoint
   app.post("/api/upload", requireAuth, uploadMiddleware, async (req: Request, res: Response) => {
     try {
+      console.log("📤 Upload endpoint called:", {
+        userId: req.session.userId,
+        filePresent: !!req.file,
+        fileName: req.file?.originalname,
+        fileSize: req.file?.size,
+      });
+
       if (!req.file) {
+        console.error("❌ No file in request");
         return res.status(400).json({ message: "No file uploaded" });
       }
 
@@ -737,14 +745,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const storagePath = `media/${fileHash}-${Date.now()}-${req.file.originalname}`;
       
       try {
+        console.log("🔄 Uploading to Supabase:", { storagePath, bucket: process.env.SUPABASE_BUCKET });
         await uploadFileToSupabase(
           process.env.SUPABASE_BUCKET!,
           storagePath,
           req.file.buffer,
           req.file.mimetype
         );
+        console.log("✅ Supabase upload successful");
       } catch (uploadError) {
-        console.error("Failed to upload to Supabase:", uploadError);
+        console.error("❌ Failed to upload to Supabase:", {
+          error: uploadError,
+          message: uploadError instanceof Error ? uploadError.message : "Unknown",
+          stack: uploadError instanceof Error ? uploadError.stack : undefined,
+        });
         return res.status(500).json({
           message: "Failed to upload file to storage",
           error: uploadError instanceof Error ? uploadError.message : "Unknown error",
@@ -752,29 +766,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const publicUrl = getPublicUrl(process.env.SUPABASE_BUCKET!, storagePath);
+      console.log("🔗 Generated public URL:", publicUrl);
 
-      const mediaItem = await storage.createMedia({
-        filename: req.file.originalname,
-        originalName: req.file.originalname,
-        url: publicUrl,
-        mimeType: req.file.mimetype,
-        size: req.file.size.toString(),
-        width: undefined,
-        height: undefined,
-        alt: "",
-        caption: "",
-        uploadedBy: req.session.userId,
-      });
+      try {
+        const mediaItem = await storage.createMedia({
+          filename: req.file.originalname,
+          originalName: req.file.originalname,
+          url: publicUrl,
+          mimeType: req.file.mimetype,
+          size: req.file.size.toString(),
+          width: undefined,
+          height: undefined,
+          alt: "",
+          caption: "",
+          uploadedBy: req.session.userId,
+        });
 
-      res.json({ 
-        url: mediaItem.url,
-        filename: mediaItem.filename,
-        originalName: mediaItem.originalName,
-        size: mediaItem.size,
-        id: mediaItem.id,
-      });
+        console.log("✅ Media record created:", { id: mediaItem.id, url: mediaItem.url });
+
+        res.json({ 
+          url: mediaItem.url,
+          filename: mediaItem.filename,
+          originalName: mediaItem.originalName,
+          size: mediaItem.size,
+          id: mediaItem.id,
+        });
+      } catch (dbError) {
+        console.error("❌ Failed to create media record:", {
+          error: dbError,
+          message: dbError instanceof Error ? dbError.message : "Unknown",
+        });
+        throw dbError;
+      }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Failed to upload file";
+      console.error("❌ Upload endpoint error:", { message: errorMsg, error });
       res.status(500).json({ message: errorMsg });
     }
   });
