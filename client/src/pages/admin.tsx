@@ -111,28 +111,35 @@ export default function Admin() {
       filtered = filtered.filter((location) => location.state === selectedState);
     }
 
-    if (!searchQuery.trim()) return filtered;
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((location) => {
+        // Search in basic fields
+        if (location.name.toLowerCase().includes(query)) return true;
+        if (location.state.toLowerCase().includes(query)) return true;
+        if (location.category.toLowerCase().includes(query)) return true;
+        
+        // Search in custom fields
+        try {
+          const customFields = JSON.parse(location.customFields || "{}");
+          const customFieldsString = Object.entries(customFields)
+            .map(([key, value]) => `${key}:${value}`)
+            .join(" ")
+            .toLowerCase();
+          if (customFieldsString.includes(query)) return true;
+        } catch (e) {
+          // Ignore parse errors
+        }
 
-    const query = searchQuery.toLowerCase();
-    return filtered.filter((location) => {
-      // Search in basic fields
-      if (location.name.toLowerCase().includes(query)) return true;
-      if (location.state.toLowerCase().includes(query)) return true;
-      if (location.category.toLowerCase().includes(query)) return true;
-      
-      // Search in custom fields
-      try {
-        const customFields = JSON.parse(location.customFields || "{}");
-        const customFieldsString = Object.entries(customFields)
-          .map(([key, value]) => `${key}:${value}`)
-          .join(" ")
-          .toLowerCase();
-        if (customFieldsString.includes(query)) return true;
-      } catch (e) {
-        // Ignore parse errors
-      }
+        return false;
+      });
+    }
 
-      return false;
+    // Sort bookmarked locations to the top
+    return filtered.sort((a, b) => {
+      if (a.isBookmarked === "true" && b.isBookmarked !== "true") return -1;
+      if (a.isBookmarked !== "true" && b.isBookmarked === "true") return 1;
+      return 0;
     });
   }, [allLocations, searchQuery, selectedState]);
 
@@ -228,6 +235,27 @@ export default function Admin() {
         title: "Re-geocoding Complete",
         description: `Processed ${data.processed} locations, updated ${data.updated} coordinates`
       });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Toggle bookmark mutation
+  const bookmarkMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/locations/${id}/bookmark`, {
+        method: "PUT",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to toggle bookmark");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["locations"] });
     },
     onError: (error: Error) => {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -438,6 +466,7 @@ export default function Admin() {
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onLocationClick={setSelectedLocation}
+                onToggleBookmark={(id) => bookmarkMutation.mutate(id)}
               />
             )}
           </CardContent>

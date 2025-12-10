@@ -26,6 +26,7 @@ export interface IStorage {
   createLocation(location: InsertLocation): Promise<Location>;
   updateLocation(id: string, location: Partial<InsertLocation>): Promise<Location | undefined>;
   deleteLocation(id: string): Promise<boolean>;
+  toggleBookmark(id: string): Promise<Location | undefined>;
   
   // Media methods
   getAllMedia(): Promise<Media[]>;
@@ -461,6 +462,16 @@ export class MemStorage implements IStorage {
 
   async deleteLocation(id: string): Promise<boolean> {
     return this.locations.delete(id);
+  }
+
+  async toggleBookmark(id: string): Promise<Location | undefined> {
+    const location = this.locations.get(id);
+    if (!location) return undefined;
+    
+    const isCurrentlyBookmarked = location.isBookmarked === "true";
+    const updatedLocation = { ...location, isBookmarked: isCurrentlyBookmarked ? "false" : "true" };
+    this.locations.set(id, updatedLocation);
+    return updatedLocation;
   }
 
   // Media methods
@@ -955,6 +966,18 @@ export class DbStorage implements IStorage {
   async deleteLocation(id: string): Promise<boolean> {
     const result = await db.delete(locations).where(eq(locations.id, id)).returning();
     return result.length > 0;
+  }
+
+  async toggleBookmark(id: string): Promise<Location | undefined> {
+    const location = await this.getLocation(id);
+    if (!location) return undefined;
+    
+    const isCurrentlyBookmarked = location.isBookmarked === "true";
+    const result = await db.update(locations)
+      .set({ isBookmarked: isCurrentlyBookmarked ? "false" : "true" })
+      .where(eq(locations.id, id))
+      .returning();
+    return result[0];
   }
 
   // Media methods

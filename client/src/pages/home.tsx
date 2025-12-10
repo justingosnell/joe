@@ -97,12 +97,6 @@ export default function Home() {
     ).slice(0, 8);
   }, [locations, searchQuery]);
 
-  // Calculate remaining states (states without attractions)
-  const remainingStates = useMemo(() => {
-    const statesWithAttractions = new Set(locations.filter(loc => US_STATES.includes(loc.state)).map(loc => loc.state));
-    return US_STATES.filter(state => !statesWithAttractions.has(state)).sort();
-  }, [locations]);
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -242,40 +236,6 @@ export default function Home() {
         {/* Slideshow Section */}
         <section className="mb-12 py-8 px-6 rounded-lg bg-card border border-border">
           <MediaSlideshow />
-        </section>
-
-        {/* Remaining States */}
-        <section className="py-12">
-          <Card className="border-2 border-primary bg-card shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-3xl text-foreground">
-                Remaining States
-              </CardTitle>
-              <CardDescription className="text-lg text-muted-foreground">
-                States without attractions yet - keep track of where you haven't been
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {remainingStates.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-lg font-semibold text-primary mb-2">🎉 Complete!</p>
-                  <p className="text-muted-foreground">You've documented attractions in all 50 states!</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  {remainingStates.map((state) => (
-                    <Badge 
-                      key={state} 
-                      variant="outline" 
-                      className="px-3 py-2 text-center justify-center text-muted-foreground hover:bg-muted cursor-default"
-                    >
-                      {state}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </section>
       </main>
 

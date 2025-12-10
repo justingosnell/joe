@@ -1224,6 +1224,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Toggle bookmark for location (must come before generic :id route)
+  app.put("/api/locations/:id/bookmark", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const location = await storage.toggleBookmark(req.params.id);
+      
+      if (!location) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      
+      res.json(location);
+    } catch (error) {
+      console.error("Toggle bookmark error:", error);
+      res.status(500).json({ message: "Failed to toggle bookmark" });
+    }
+  });
+
   // Update location
   app.put("/api/locations/:id", requireAuth, async (req: Request, res: Response) => {
     try {

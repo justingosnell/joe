@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { ChevronLeft, ChevronRight, X, Pause, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Location } from "@shared/schema";
@@ -10,6 +10,8 @@ interface CategorySlideshowModalProps {
   images: Location[];
 }
 
+type SortOrder = "original" | "name" | "city" | "date" | "random";
+
 export function CategorySlideshowModal({
   isOpen,
   onClose,
@@ -18,16 +20,45 @@ export function CategorySlideshowModal({
 }: CategorySlideshowModalProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const [sortOrder, setSortOrder] = useState<SortOrder>("original");
+
+  const sortedImages = useMemo(() => {
+    let result = [...images];
+    
+    switch (sortOrder) {
+      case "name":
+        result.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "city":
+        result.sort((a, b) => a.city.localeCompare(b.city));
+        break;
+      case "date":
+        result.sort((a, b) => new Date(b.taggedDate).getTime() - new Date(a.taggedDate).getTime());
+        break;
+      case "random":
+        result = result.sort(() => Math.random() - 0.5);
+        break;
+      case "original":
+      default:
+        break;
+    }
+    
+    return result;
+  }, [images, sortOrder]);
 
   useEffect(() => {
-    if (!isAutoPlaying || images.length === 0) return;
+    setCurrentIndex(0);
+  }, [sortOrder]);
+
+  useEffect(() => {
+    if (!isAutoPlaying || sortedImages.length === 0) return;
 
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % images.length);
+      setCurrentIndex((prev) => (prev + 1) % sortedImages.length);
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [isAutoPlaying, images.length]);
+  }, [isAutoPlaying, sortedImages.length]);
 
   useEffect(() => {
     if (isOpen) {
@@ -43,12 +74,12 @@ export function CategorySlideshowModal({
 
   const goToPrevious = () => {
     setIsAutoPlaying(false);
-    setCurrentIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+    setCurrentIndex((prev) => (prev === 0 ? sortedImages.length - 1 : prev - 1));
   };
 
   const goToNext = () => {
     setIsAutoPlaying(false);
-    setCurrentIndex((prev) => (prev + 1) % images.length);
+    setCurrentIndex((prev) => (prev + 1) % sortedImages.length);
   };
 
   const goToSlide = (index: number) => {
@@ -59,11 +90,11 @@ export function CategorySlideshowModal({
     setIsAutoPlaying(!isAutoPlaying);
   };
 
-  if (images.length === 0) {
+  if (sortedImages.length === 0) {
     return null;
   }
 
-  const currentLocation = images[currentIndex];
+  const currentLocation = sortedImages[currentIndex];
 
   return (
     <>
@@ -85,14 +116,58 @@ export function CategorySlideshowModal({
               <h2 className="luckiest-guy-regular text-2xl font-bold text-foreground">
                 {categoryTitle}
               </h2>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-                className="text-foreground hover:bg-accent"
-              >
-                <X className="h-6 w-6" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1">
+                  <Button
+                    variant={sortOrder === "original" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSortOrder("original")}
+                    className="text-xs"
+                  >
+                    Original
+                  </Button>
+                  <Button
+                    variant={sortOrder === "name" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSortOrder("name")}
+                    className="text-xs"
+                  >
+                    Name
+                  </Button>
+                  <Button
+                    variant={sortOrder === "city" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSortOrder("city")}
+                    className="text-xs"
+                  >
+                    City
+                  </Button>
+                  <Button
+                    variant={sortOrder === "date" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSortOrder("date")}
+                    className="text-xs"
+                  >
+                    Date
+                  </Button>
+                  <Button
+                    variant={sortOrder === "random" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSortOrder("random")}
+                    className="text-xs"
+                  >
+                    Random
+                  </Button>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onClose}
+                  className="text-foreground hover:bg-accent"
+                >
+                  <X className="h-6 w-6" />
+                </Button>
+              </div>
             </div>
 
             <div className="relative w-full h-96 bg-background rounded-lg overflow-hidden group">
@@ -124,7 +199,7 @@ export function CategorySlideshowModal({
               </Button>
 
               <div className="absolute bottom-3 md:bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 md:gap-2 overflow-x-auto max-w-xs">
-                {images.map((_, index) => (
+                {sortedImages.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => goToSlide(index)}
@@ -163,7 +238,7 @@ export function CategorySlideshowModal({
                 <p className="text-sm mt-1">{currentLocation.description}</p>
               )}
               <p className="text-xs mt-2">
-                {currentIndex + 1} / {images.length}
+                {currentIndex + 1} / {sortedImages.length}
               </p>
             </div>
           </div>

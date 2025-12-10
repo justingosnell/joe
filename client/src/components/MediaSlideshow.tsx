@@ -25,10 +25,10 @@ export function MediaSlideshow() {
       const response = await fetch(getApiUrl("/api/locations"));
       if (!response.ok) return [];
       const data = await response.json();
-      // Filter only locations with images and shuffle them
+      // Filter only locations with images
       const locationsWithImages = data.filter((loc: Location) => loc.photoUrl);
-      // Shuffle array
-      return locationsWithImages.sort(() => Math.random() - 0.5);
+      // Sort by newest location first
+      return locationsWithImages.sort((a, b) => new Date(b.taggedDate).getTime() - new Date(a.taggedDate).getTime());
     },
   });
 

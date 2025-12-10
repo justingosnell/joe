@@ -41,6 +41,7 @@ export const locations = pgTable("locations", {
   taggedDate: text("tagged_date").notNull(),
   description: text("description").default(""),
   customFields: text("custom_fields").default("{}"),
+  isBookmarked: text("is_bookmarked").notNull().default("false"),
 });
 
 export const insertLocationSchema = createInsertSchema(locations).omit({
@@ -54,6 +55,7 @@ export const insertLocationSchema = createInsertSchema(locations).omit({
   photoUrl: z.string().optional().default(""),
   photoId: z.string().optional().default(""),
   taggedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  isBookmarked: z.string().optional().default("false"),
 });
 
 export type InsertLocation = z.infer<typeof insertLocationSchema>;

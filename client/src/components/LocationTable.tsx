@@ -1,4 +1,4 @@
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RibbonBadge } from "@/components/RibbonBadge";
 import { useCategoryColors } from "@/hooks/useCategoryColors";
@@ -17,9 +17,10 @@ interface LocationTableProps {
   onEdit: (location: Location) => void;
   onDelete: (id: string) => void;
   onLocationClick: (location: Location) => void;
+  onToggleBookmark: (id: string) => void;
 }
 
-export function LocationTable({ locations, onEdit, onDelete, onLocationClick }: LocationTableProps) {
+export function LocationTable({ locations, onEdit, onDelete, onLocationClick, onToggleBookmark }: LocationTableProps) {
   const { categories } = useCategoryColors();
 
   // Create a map of category slug to category object for quick lookup
@@ -109,6 +110,18 @@ export function LocationTable({ locations, onEdit, onDelete, onLocationClick }: 
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => onToggleBookmark(location.id)}
+                      title={location.isBookmarked === "true" ? "Remove bookmark" : "Bookmark location"}
+                    >
+                      <Star
+                        className="h-4 w-4"
+                        fill={location.isBookmarked === "true" ? "currentColor" : "none"}
+                      />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
