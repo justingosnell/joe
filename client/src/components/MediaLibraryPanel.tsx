@@ -9,6 +9,7 @@ import { Upload, X, Search, Trash2, Edit2, Check } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getApiUrl } from "@/lib/api";
+import imageCompression from "browser-image-compression";
 import type { Media } from "@shared/schema";
 
 interface MediaLibraryPanelProps {
@@ -58,8 +59,22 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
   // Upload mutation for single file
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
+      let compressedFile = file;
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+      };
+
+      try {
+        compressedFile = await imageCompression(file, options);
+        console.log(`Image compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
+      } catch (compressionError) {
+        console.warn("Image compression failed, using original file:", compressionError);
+      }
+
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("image", compressedFile);
 
       const response = await fetch(getApiUrl("/api/media"), {
         method: "POST",

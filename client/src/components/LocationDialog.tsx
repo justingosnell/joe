@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertLocationSchema, type InsertLocation, type Location, type Media, type Category } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { getApiUrl } from "@/lib/api";
+import imageCompression from "browser-image-compression";
 import {
   Dialog,
   DialogContent,
@@ -295,8 +296,22 @@ export function LocationDialog({
     setUploading(true);
 
     try {
+      let compressedFile = file;
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+      };
+
+      try {
+        compressedFile = await imageCompression(file, options);
+        console.log(`Image compressed: ${(file.size / 1024 / 1024).toFixed(2)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
+      } catch (compressionError) {
+        console.warn("Image compression failed, using original file:", compressionError);
+      }
+
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("image", compressedFile);
 
       const response = await fetch(getApiUrl("/api/upload"), {
         method: "POST",
