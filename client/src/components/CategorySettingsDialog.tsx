@@ -110,7 +110,7 @@ export function CategorySettingsDialog({
     setUploadingBg(true);
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("image", file);
 
     try {
       const response = await fetch(getApiUrl("/api/upload"), {
@@ -147,7 +147,7 @@ export function CategorySettingsDialog({
     setUploadingIcon(true);
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("image", file);
 
     try {
       const response = await fetch(getApiUrl("/api/upload"), {
