@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import imageCompression from "browser-image-compression";
 import {
   Dialog,
   DialogContent,
@@ -109,10 +110,23 @@ export function CategorySettingsDialog({
     setBackgroundImageFile(file);
     setUploadingBg(true);
 
-    const formData = new FormData();
-    formData.append("image", file);
-
     try {
+      let compressedFile = file;
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+      };
+
+      try {
+        compressedFile = await imageCompression(file, options);
+      } catch (compressionError) {
+        console.warn("Image compression failed, using original file:", compressionError);
+      }
+
+      const formData = new FormData();
+      formData.append("image", compressedFile);
+
       const response = await fetch(getApiUrl("/api/upload"), {
         method: "POST",
         body: formData,
@@ -128,6 +142,7 @@ export function CategorySettingsDialog({
       const url = data.url || data.publicUrl;
       form.setValue("backgroundImageUrl", url);
       toast({ title: "Success", description: "Background image uploaded" });
+      setBgSelectorOpen(false);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to upload image";
       console.error("Error uploading background image:", error);
@@ -146,10 +161,23 @@ export function CategorySettingsDialog({
     setCustomIconFile(file);
     setUploadingIcon(true);
 
-    const formData = new FormData();
-    formData.append("image", file);
-
     try {
+      let compressedFile = file;
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true,
+      };
+
+      try {
+        compressedFile = await imageCompression(file, options);
+      } catch (compressionError) {
+        console.warn("Image compression failed, using original file:", compressionError);
+      }
+
+      const formData = new FormData();
+      formData.append("image", compressedFile);
+
       const response = await fetch(getApiUrl("/api/upload"), {
         method: "POST",
         body: formData,
@@ -165,6 +193,7 @@ export function CategorySettingsDialog({
       const url = data.url || data.publicUrl;
       form.setValue("customIconUrl", url);
       toast({ title: "Success", description: "Custom icon uploaded" });
+      setIconSelectorOpen(false);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to upload icon";
       console.error("Error uploading custom icon:", error);
@@ -429,10 +458,7 @@ export function CategorySettingsDialog({
                     type="file"
                     className="hidden"
                     accept="image/*"
-                    onChange={(e) => {
-                      handleBackgroundImageUpload(e);
-                      setBgSelectorOpen(false);
-                    }}
+                    onChange={handleBackgroundImageUpload}
                     disabled={uploadingBg}
                   />
                 </label>
@@ -488,10 +514,7 @@ export function CategorySettingsDialog({
                     type="file"
                     className="hidden"
                     accept="image/*"
-                    onChange={(e) => {
-                      handleCustomIconUpload(e);
-                      setIconSelectorOpen(false);
-                    }}
+                    onChange={handleCustomIconUpload}
                     disabled={uploadingIcon}
                   />
                 </label>
