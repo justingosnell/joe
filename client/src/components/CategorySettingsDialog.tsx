@@ -125,7 +125,7 @@ export function CategorySettingsDialog({
       }
 
       const formData = new FormData();
-      formData.append("image", compressedFile);
+      formData.append("image", compressedFile, file.name);
 
       const response = await fetch(getApiUrl("/api/upload"), {
         method: "POST",
@@ -176,7 +176,7 @@ export function CategorySettingsDialog({
       }
 
       const formData = new FormData();
-      formData.append("image", compressedFile);
+      formData.append("image", compressedFile, file.name);
 
       const response = await fetch(getApiUrl("/api/upload"), {
         method: "POST",

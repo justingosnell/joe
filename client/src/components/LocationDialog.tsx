@@ -311,7 +311,10 @@ export function LocationDialog({
       }
 
       const formData = new FormData();
-      formData.append("image", compressedFile);
+      // Ensure we pass the filename, as compressedFile might be a Blob without a name property
+      formData.append("image", compressedFile, file.name);
+
+      console.log("Uploading file:", file.name, "Size:", compressedFile.size);
 
       const response = await fetch(getApiUrl("/api/upload"), {
         method: "POST",
@@ -327,7 +330,8 @@ export function LocationDialog({
       }
 
       if (!response.ok) {
-        const errorMessage = errorData?.message || errorData?.error || `Upload failed (HTTP ${response.status})`;
+        const errorMessage = errorData?.message || errorData?.error || `Upload failed (HTTP ${response.status}: ${response.statusText})`;
+        console.error("Upload failed response:", response.status, response.statusText, errorData);
         throw new Error(errorMessage);
       }
 

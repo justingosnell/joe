@@ -74,7 +74,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
       }
 
       const formData = new FormData();
-      formData.append("image", compressedFile);
+      formData.append("image", compressedFile, file.name);
 
       const response = await fetch(getApiUrl("/api/media"), {
         method: "POST",

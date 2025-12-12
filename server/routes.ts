@@ -1,4 +1,4 @@
-import express, { type Express, type Request, type Response } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -50,7 +50,7 @@ declare module "express-session" {
 }
 
 // Middleware to check if user is authenticated
-function requireAuth(req: Request, res: Response, next: Function) {
+async function requireAuth(req: Request, res: Response, next: NextFunction) {
   console.log("🔐 Auth check:", {
     sessionId: req.sessionID,
     userId: req.session.userId,
@@ -60,7 +60,19 @@ function requireAuth(req: Request, res: Response, next: Function) {
     console.log("❌ Auth failed - no userId in session");
     return res.status(401).json({ message: "Unauthorized" });
   }
-  next();
+
+  try {
+    const user = await storage.getUser(req.session.userId);
+    if (!user) {
+      console.log("❌ Auth failed - user not found in DB:", req.session.userId);
+      req.session.destroy(() => {});
+      return res.status(401).json({ message: "Unauthorized - User not found" });
+    }
+    next();
+  } catch (error) {
+    console.error("❌ Auth check error:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
 }
 
 // Configure multer for file uploads - using dynamic import
@@ -84,13 +96,24 @@ async function initMulter() {
     },
     fileFilter: (req: any, file: any, cb: any) => {
       const allowedTypes = /jpeg|jpg|png|gif|webp/;
-      const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-      const mimetype = allowedTypes.test(file.mimetype);
+      const extname = path.extname(file.originalname).toLowerCase();
+      const isExtAllowed = allowedTypes.test(extname);
+      const isMimeAllowed = allowedTypes.test(file.mimetype);
 
-      if (mimetype && extname) {
+      console.log("📂 File upload check:", {
+        filename: file.originalname,
+        mimetype: file.mimetype,
+        extname: extname,
+        isExtAllowed,
+        isMimeAllowed
+      });
+
+      // Allow if mimetype is valid, even if extension is missing or mismatch
+      // (browser-image-compression might send blob without extension)
+      if (isMimeAllowed) {
         return cb(null, true);
       } else {
-        cb(new Error("Only image files are allowed (jpeg, jpg, png, gif, webp)"));
+        cb(new Error(`Only image files are allowed. Got: ${file.mimetype}`));
       }
     },
   });
@@ -601,9 +624,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Wrapper to handle multer errors
   const uploadMiddleware = (req: Request, res: Response, next: Function) => {
+    if (!upload) {
+      console.error("❌ Multer not initialized");
+      return res.status(500).json({ message: "Server configuration error: Uploads not initialized" });
+    }
     upload.single("image")(req, res, (err: any) => {
       if (err) {
         console.error("❌ Multer error:", err);
+        // Check for specific multer errors
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ message: "File too large (max 10MB)" });
+        }
         return res.status(400).json({ message: err.message || "File upload failed" });
       }
       next();
@@ -621,10 +652,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         filename: req.file.originalname,
         size: req.file.size,
         mimetype: req.file.mimetype,
+        encoding: req.file.encoding,
+        hasBuffer: !!req.file.buffer,
+        bufferLength: req.file.buffer?.length
       });
 
       const fileHash = computeFileHash(req.file.buffer);
-      const storagePath = `media/${fileHash}-${Date.now()}-${req.file.originalname}`;
+      // Sanitize filename to prevent issues with special characters
+      const sanitizedFilename = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const storagePath = `media/${fileHash}-${Date.now()}-${sanitizedFilename}`;
       
       console.log("🔑 Supabase config:", {
         url: process.env.SUPABASE_URL ? "✓" : "✗",
@@ -632,10 +668,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         bucket: process.env.SUPABASE_BUCKET || "NOT SET",
       });
 
+      if (!process.env.SUPABASE_BUCKET) {
+        console.error("❌ SUPABASE_BUCKET not set");
+        return res.status(500).json({ message: "Server configuration error: Storage bucket not configured" });
+      }
+
       try {
         console.log("📤 Uploading to Supabase...");
         await uploadFileToSupabase(
-          process.env.SUPABASE_BUCKET!,
+          process.env.SUPABASE_BUCKET,
           storagePath,
           req.file.buffer,
           req.file.mimetype
@@ -653,7 +694,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const publicUrl = getPublicUrl(process.env.SUPABASE_BUCKET!, storagePath);
+      const publicUrl = getPublicUrl(process.env.SUPABASE_BUCKET, storagePath);
 
       console.log("💾 Creating media record in database...");
       const mediaItem = await storage.createMedia({
@@ -744,10 +785,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fileHash = computeFileHash(req.file.buffer);
       const storagePath = `media/${fileHash}-${Date.now()}-${req.file.originalname}`;
       
+      if (!process.env.SUPABASE_BUCKET) {
+        console.error("❌ SUPABASE_BUCKET not set");
+        return res.status(500).json({ message: "Server configuration error: Storage bucket not configured" });
+      }
+
       try {
         console.log("🔄 Uploading to Supabase:", { storagePath, bucket: process.env.SUPABASE_BUCKET });
         await uploadFileToSupabase(
-          process.env.SUPABASE_BUCKET!,
+          process.env.SUPABASE_BUCKET,
           storagePath,
           req.file.buffer,
           req.file.mimetype
@@ -765,7 +811,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const publicUrl = getPublicUrl(process.env.SUPABASE_BUCKET!, storagePath);
+      const publicUrl = getPublicUrl(process.env.SUPABASE_BUCKET, storagePath);
       console.log("🔗 Generated public URL:", publicUrl);
 
       try {
