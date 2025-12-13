@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import type { Location } from "@shared/schema";
 
@@ -69,6 +70,9 @@ export function PhotoPanel({ location, onClose }: PhotoPanelProps) {
             <div className="p-6 space-y-4">
               <DialogHeader>
                 <DialogTitle className="sr-only">Location Details</DialogTitle>
+                <DialogDescription className="sr-only">
+                  Details about the selected location including photo, category, and metadata.
+                </DialogDescription>
               </DialogHeader>
 
               <div className="flex items-start gap-3">

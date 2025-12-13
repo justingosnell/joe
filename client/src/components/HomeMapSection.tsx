@@ -15,6 +15,7 @@ import { Card } from "@/components/ui/card";
 import { PhotoPanel } from "@/components/PhotoPanel";
 import { useCategoryColors } from "@/hooks/useCategoryColors";
 import { getApiUrl } from "@/lib/api";
+import { createCustomIcon } from "@/lib/map-utils";
 import type { Location } from "@shared/schema";
 
 const STATE_NAMES: Record<string, string> = {
@@ -69,32 +70,6 @@ const STATE_NAMES: Record<string, string> = {
   WI: "Wisconsin",
   WY: "Wyoming",
 };
-
-function createCustomIcon(category: string, isSelected: boolean, color: string) {
-  let markerColor = color;
-
-  if (isSelected) {
-    markerColor = "#a855f7";
-  }
-
-  const svgIcon = `
-    <svg width="32" height="42" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
-      <path d="M16 0C9.373 0 4 5.373 4 12c0 9 12 28 12 28s12-19 12-28c0-6.627-5.373-12-12-12z" 
-            fill="${markerColor}" 
-            stroke="white" 
-            stroke-width="2"/>
-      <circle cx="16" cy="12" r="5" fill="white"/>
-    </svg>
-  `;
-
-  return L.divIcon({
-    html: svgIcon,
-    className: "custom-marker",
-    iconSize: [32, 42],
-    iconAnchor: [16, 42],
-    popupAnchor: [0, -42],
-  });
-}
 
 function MapController({
   locations,
@@ -152,7 +127,7 @@ function InteractiveMap({
   return (
     <MapContainer
       center={[39.8283, -98.5795] as [number, number]}
-      zoom={5}
+      zoom={6}
       className="h-full w-full rounded"
       zoomControl={true}
     >

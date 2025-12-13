@@ -376,7 +376,7 @@ export function CategorySettingsDialog({
                 className="relative w-full h-40 rounded-lg overflow-hidden border"
                 style={{
                   backgroundImage: previewBackgroundImage
-                    ? `url(${previewBackgroundImage})`
+                    ? `url("${previewBackgroundImage.replace(/\(/g, '%28').replace(/\)/g, '%29')}")`
                     : undefined,
                   backgroundSize: "cover",
                   backgroundPosition: "center",

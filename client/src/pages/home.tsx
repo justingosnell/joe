@@ -155,7 +155,7 @@ export default function Home() {
                     <div
                       className="absolute inset-0 bg-cover bg-center"
                       style={{
-                        backgroundImage: `url(${backgroundImage})`,
+                        backgroundImage: `url("${backgroundImage.replace(/\(/g, '%28').replace(/\)/g, '%29')}")`,
                       }}
                     />
                   )}
