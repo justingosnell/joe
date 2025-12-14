@@ -37,9 +37,7 @@ function Router() {
     <PageTransition>
       <Switch>
         <Route path="/" component={Home} />
-        <Route path="/map">
-          {() => <ProtectedRoute component={Map} />}
-        </Route>
+        <Route path="/map" component={Map} />
         <Route path="/login" component={Login} />
         <Route path="/admin">
           {() => <ProtectedRoute component={Admin} />}

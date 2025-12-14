@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearch } from "wouter";
 import { AppHeader } from "@/components/AppHeader";
 import { CategoryFilter, type CategoryType } from "@/components/CategoryFilter";
 import { StateFilter } from "@/components/StateFilter";
@@ -12,6 +13,7 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [selectedState, setSelectedState] = useState<string>("");
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const searchString = useSearch();
 
   // Fetch locations from API
   const { data: locations = [], isLoading } = useQuery<Location[]>({
@@ -22,6 +24,19 @@ export default function Home() {
       return response.json();
     },
   });
+
+  // Handle URL query params for direct navigation to a location
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    const locationId = params.get("locationId");
+    
+    if (locationId && locations.length > 0) {
+      const loc = locations.find(l => l.id === locationId);
+      if (loc) {
+        setSelectedLocation(loc);
+      }
+    }
+  }, [searchString, locations]);
 
   // Fetch categories from API
   const { data: categories = [] } = useQuery<Category[]>({

@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { SearchBar } from "./SearchBar";
 
 export function AppHeader() {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -75,6 +76,7 @@ export function AppHeader() {
           </button>
 
           <div className="flex-1 flex items-center justify-end gap-2">
+            <SearchBar />
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
