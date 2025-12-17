@@ -12,7 +12,8 @@
     "db:push": "drizzle-kit push",
     "merge-data": "tsx merge-data.ts",
     "import-data": "tsx import-data.ts",
-    "export-data": "tsx export-data.ts"
+    "export-data": "tsx export-data.ts",
+    "migrate-cloudinary": "NODE_ENV=production tsx migrate-to-cloudinary.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -54,6 +55,7 @@
     "better-sqlite3": "^12.4.1",
     "browser-image-compression": "^2.0.2",
     "class-variance-authority": "^0.7.1",
+    "cloudinary": "^2.8.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "connect-pg-simple": "^10.0.0",

@@ -9,6 +9,8 @@ import { storage, ensureStorageReady } from "./storage";
 import { runMigrations, initializeDatabase } from "./db";
 import { uploadFileToSupabase, getPublicUrl } from "./supabase-client";
 import { geocodeLocation, isValidUSCoordinates } from "./geocoding";
+import { imageCache } from "./image-cache";
+import { shouldUseCloudinary, getStorageStats } from "./storage-monitor";
 import bcrypt from "bcrypt";
 import { insertLocationSchema } from "@shared/schema";
 import { z } from "zod";
@@ -594,7 +596,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve image from database by ID (public endpoint)
   app.get("/api/image/:id", async (req: Request, res: Response) => {
     try {
-      const mediaItem = await storage.getMedia(req.params.id);
+      const id = req.params.id;
+
+      const cachedImage = imageCache.get(id);
+      if (cachedImage) {
+        console.log(`✅ Cache hit for image: ${id}`);
+        res.setHeader("Content-Type", cachedImage.mimeType);
+        res.setHeader("Cache-Control", "public, max-age=31536000");
+        res.setHeader("X-Cache", "HIT");
+        res.send(cachedImage.buffer);
+        return;
+      }
+
+      const mediaItem = await storage.getMedia(id);
       if (!mediaItem) {
         return res.status(404).json({ message: "Image not found" });
       }
@@ -608,9 +622,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (parts.length === 2) {
           const mimeType = parts[0].replace("data:", "");
           const base64Data = parts[1];
+          const buffer = Buffer.from(base64Data, "base64");
+
+          imageCache.set(id, buffer, mimeType);
+          console.log(`💾 Cached image: ${id}`);
+
           res.setHeader("Content-Type", mimeType);
           res.setHeader("Cache-Control", "public, max-age=31536000");
-          res.send(Buffer.from(base64Data, "base64"));
+          res.setHeader("X-Cache", "MISS");
+          res.send(buffer);
           return;
         }
       }
@@ -658,45 +678,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const fileHash = computeFileHash(req.file.buffer);
-      // Sanitize filename to prevent issues with special characters
       const sanitizedFilename = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_");
-      const storagePath = `media/${fileHash}-${Date.now()}-${sanitizedFilename}`;
-      
-      console.log("🔑 Supabase config:", {
-        url: process.env.SUPABASE_URL ? "✓" : "✗",
-        key: process.env.SUPABASE_KEY ? "✓" : "✗",
-        bucket: process.env.SUPABASE_BUCKET || "NOT SET",
-      });
 
-      if (!process.env.SUPABASE_BUCKET) {
-        console.error("❌ SUPABASE_BUCKET not set");
-        return res.status(500).json({ message: "Server configuration error: Storage bucket not configured" });
+      let publicUrl: string;
+      let storageBackend: "supabase" | "cloudinary" = "cloudinary";
+
+      if (process.env.CLOUDINARY_CLOUD_NAME) {
+        try {
+          console.log("📤 Uploading to Cloudinary...");
+          const { uploadFileToCloudinary } = await import("./cloudinary-client");
+          const { publicUrl: cloudUrl } = await uploadFileToCloudinary(
+            req.file.buffer,
+            `${fileHash}-${sanitizedFilename}`
+          );
+          publicUrl = cloudUrl;
+          storageBackend = "cloudinary";
+          console.log("✅ Cloudinary upload successful");
+        } catch (cloudinaryError) {
+          console.warn("⚠️ Cloudinary upload failed, falling back to Supabase:", cloudinaryError);
+          
+          if (!process.env.SUPABASE_BUCKET) {
+            console.error("❌ Both Cloudinary and Supabase not configured");
+            return res.status(500).json({ message: "Storage configuration error" });
+          }
+
+          try {
+            const storagePath = `media/${fileHash}-${Date.now()}-${sanitizedFilename}`;
+            await uploadFileToSupabase(
+              process.env.SUPABASE_BUCKET,
+              storagePath,
+              req.file.buffer,
+              req.file.mimetype
+            );
+            publicUrl = getPublicUrl(process.env.SUPABASE_BUCKET, storagePath);
+            storageBackend = "supabase";
+            console.log("✅ Fallback to Supabase successful");
+          } catch (supabaseError) {
+            console.error("❌ Both Cloudinary and Supabase uploads failed:", supabaseError);
+            throw supabaseError;
+          }
+        }
+      } else {
+        console.error("❌ Cloudinary not configured");
+        return res.status(500).json({ message: "Server configuration error: Cloudinary not configured" });
       }
 
-      try {
-        console.log("📤 Uploading to Supabase...");
-        await uploadFileToSupabase(
-          process.env.SUPABASE_BUCKET,
-          storagePath,
-          req.file.buffer,
-          req.file.mimetype
-        );
-        console.log("✅ Supabase upload successful");
-      } catch (uploadError) {
-        console.error("❌ Failed to upload to Supabase:", {
-          error: uploadError,
-          message: uploadError instanceof Error ? uploadError.message : "Unknown",
-          stack: uploadError instanceof Error ? uploadError.stack : undefined,
-        });
-        return res.status(500).json({
-          message: "Failed to upload file to storage",
-          error: uploadError instanceof Error ? uploadError.message : "Unknown error",
-        });
-      }
-
-      const publicUrl = getPublicUrl(process.env.SUPABASE_BUCKET, storagePath);
-
-      console.log("💾 Creating media record in database...");
+      console.log("💾 Creating media record in database...", { storageBackend });
       const mediaItem = await storage.createMedia({
         filename: req.file.originalname,
         originalName: req.file.originalname,
@@ -707,10 +734,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         height: undefined,
         alt: "",
         caption: "",
+        storageBackend,
         uploadedBy: req.session.userId,
       });
 
-      console.log("✅ Media record created:", mediaItem.id);
+      console.log("✅ Media record created:", { id: mediaItem.id, backend: storageBackend });
       res.status(201).json(mediaItem);
     } catch (error) {
       console.error("❌ Upload error:", {
@@ -748,16 +776,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete media
   app.delete("/api/media/:id", requireAuth, async (req: Request, res: Response) => {
     try {
-      const mediaItem = await storage.getMedia(req.params.id);
+      const mediaId = req.params.id;
+      const mediaItem = await storage.getMedia(mediaId);
       if (!mediaItem) {
         return res.status(404).json({ message: "Media not found" });
       }
 
       // Delete from database (images now stored as base64 in DB, no disk files)
-      const success = await storage.deleteMedia(req.params.id);
+      const success = await storage.deleteMedia(mediaId);
       if (!success) {
         return res.status(404).json({ message: "Media not found" });
       }
+
+      imageCache.delete(mediaId);
+      console.log(`🗑️ Removed image from cache: ${mediaId}`);
 
       res.json({ message: "Media deleted successfully" });
     } catch (error) {
@@ -783,36 +815,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const fileHash = computeFileHash(req.file.buffer);
-      const storagePath = `media/${fileHash}-${Date.now()}-${req.file.originalname}`;
-      
-      if (!process.env.SUPABASE_BUCKET) {
-        console.error("❌ SUPABASE_BUCKET not set");
-        return res.status(500).json({ message: "Server configuration error: Storage bucket not configured" });
-      }
+      const sanitizedFilename = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_");
 
-      try {
-        console.log("🔄 Uploading to Supabase:", { storagePath, bucket: process.env.SUPABASE_BUCKET });
-        await uploadFileToSupabase(
-          process.env.SUPABASE_BUCKET,
-          storagePath,
-          req.file.buffer,
-          req.file.mimetype
-        );
-        console.log("✅ Supabase upload successful");
-      } catch (uploadError) {
-        console.error("❌ Failed to upload to Supabase:", {
-          error: uploadError,
-          message: uploadError instanceof Error ? uploadError.message : "Unknown",
-          stack: uploadError instanceof Error ? uploadError.stack : undefined,
-        });
-        return res.status(500).json({
-          message: "Failed to upload file to storage",
-          error: uploadError instanceof Error ? uploadError.message : "Unknown error",
-        });
-      }
+      let publicUrl: string;
+      let storageBackend: "supabase" | "cloudinary" = "cloudinary";
 
-      const publicUrl = getPublicUrl(process.env.SUPABASE_BUCKET, storagePath);
-      console.log("🔗 Generated public URL:", publicUrl);
+      if (process.env.CLOUDINARY_CLOUD_NAME) {
+        try {
+          console.log("📤 Uploading to Cloudinary...");
+          const { uploadFileToCloudinary } = await import("./cloudinary-client");
+          const { publicUrl: cloudUrl } = await uploadFileToCloudinary(
+            req.file.buffer,
+            `${fileHash}-${sanitizedFilename}`
+          );
+          publicUrl = cloudUrl;
+          storageBackend = "cloudinary";
+          console.log("✅ Cloudinary upload successful");
+        } catch (cloudinaryError) {
+          console.warn("⚠️ Cloudinary upload failed, falling back to Supabase:", cloudinaryError);
+          
+          if (!process.env.SUPABASE_BUCKET) {
+            console.error("❌ Both Cloudinary and Supabase not configured");
+            return res.status(500).json({ message: "Storage configuration error" });
+          }
+
+          try {
+            const storagePath = `media/${fileHash}-${Date.now()}-${sanitizedFilename}`;
+            await uploadFileToSupabase(
+              process.env.SUPABASE_BUCKET,
+              storagePath,
+              req.file.buffer,
+              req.file.mimetype
+            );
+            publicUrl = getPublicUrl(process.env.SUPABASE_BUCKET, storagePath);
+            storageBackend = "supabase";
+            console.log("✅ Fallback to Supabase successful");
+          } catch (supabaseError) {
+            console.error("❌ Both Cloudinary and Supabase uploads failed:", supabaseError);
+            throw supabaseError;
+          }
+        }
+      } else {
+        console.error("❌ Cloudinary not configured");
+        return res.status(500).json({ message: "Server configuration error: Cloudinary not configured" });
+      }
 
       try {
         const mediaItem = await storage.createMedia({
@@ -825,10 +871,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           height: undefined,
           alt: "",
           caption: "",
+          storageBackend,
           uploadedBy: req.session.userId,
         });
 
-        console.log("✅ Media record created:", { id: mediaItem.id, url: mediaItem.url });
+        console.log("✅ Media record created:", { id: mediaItem.id, url: mediaItem.url, backend: storageBackend });
 
         res.json({ 
           url: mediaItem.url,
@@ -1868,6 +1915,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Delete category error:", error);
       res.status(500).json({ message: "Failed to delete category" });
     }
+  });
+
+  app.get("/api/cache-stats", requireAuth, (req: Request, res: Response) => {
+    const stats = imageCache.getStats();
+    res.json({
+      message: "Image cache statistics",
+      stats,
+    });
+  });
+
+  app.get("/api/storage-stats", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const stats = await getStorageStats();
+      res.json({
+        message: "Storage statistics",
+        stats,
+      });
+    } catch (error) {
+      console.error("Storage stats error:", error);
+      res.status(500).json({ message: "Failed to get storage stats" });
+    }
+  });
+
+  app.post("/api/cache/clear", (req: Request, res: Response) => {
+    imageCache.clear();
+    console.log("🧹 Image cache cleared");
+    res.json({ message: "Image cache cleared successfully" });
   });
 
   const httpServer = createServer(app);

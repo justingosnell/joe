@@ -1,5 +1,8 @@
+import { useState, useEffect } from "react";
 import { Calendar, MapPin, Tag, Info, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { useCategoryColors } from "@/hooks/useCategoryColors";
 import {
   Dialog,
@@ -17,6 +20,14 @@ interface PhotoPanelProps {
 
 export function PhotoPanel({ location, onClose }: PhotoPanelProps) {
   const { categories } = useCategoryColors();
+  const [showOverlay, setShowOverlay] = useState(() => {
+    const saved = localStorage.getItem("showImageOverlay");
+    return saved !== null ? saved === "true" : true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("showImageOverlay", String(showOverlay));
+  }, [showOverlay]);
 
   // Create a map of category slug to category object for quick lookup
   const categoryMap = categories.reduce((map, cat) => {
@@ -52,16 +63,20 @@ export function PhotoPanel({ location, onClose }: PhotoPanelProps) {
                 className="w-full h-full object-contain"
                 data-testid="img-location-photo"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+              {showOverlay && (
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+              )}
               <div className="absolute bottom-4 left-4 right-4">
-                <Badge 
-                  className="mb-2 text-white"
-                  style={{ backgroundColor: getCategoryColor(location.category) }}
-                >
-                  <Tag className="h-3 w-3 mr-1" />
-                  {getCategoryLabel(location.category)}
-                </Badge>
-                <h2 className="luckiest-guy-regular text-2xl font-bold text-white" data-testid="text-location-name">
+                {showOverlay && (
+                  <Badge 
+                    className="mb-2 text-white"
+                    style={{ backgroundColor: getCategoryColor(location.category) }}
+                  >
+                    <Tag className="h-3 w-3 mr-1" />
+                    {getCategoryLabel(location.category)}
+                  </Badge>
+                )}
+                <h2 className="luckiest-guy-regular text-2xl font-bold text-white drop-shadow-md" data-testid="text-location-name">
                   {location.name}
                 </h2>
               </div>
@@ -131,8 +146,20 @@ export function PhotoPanel({ location, onClose }: PhotoPanelProps) {
                 </div>
               )}
 
-              <div className="pt-4 border-t">
-                <p className="text-sm font-medium mb-2">Photo</p>
+              <div className="pt-4 border-t flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <p className="text-sm font-medium mb-0">Overlay</p>
+                    <div className="flex items-center gap-2">
+                        <Switch 
+                            id="overlay-toggle" 
+                            checked={showOverlay} 
+                            onCheckedChange={setShowOverlay} 
+                        />
+                        <Label htmlFor="overlay-toggle" className="text-xs text-muted-foreground font-normal cursor-pointer">
+                             Off/On
+                        </Label>
+                    </div>
+                </div>
                 <a 
                   href={location.photoUrl} 
                   target="_blank" 

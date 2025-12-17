@@ -75,6 +75,7 @@ export const media = pgTable("media", {
   caption: text("caption").default(""),
   data: text("data"), // Legacy base64 data, to be phased out
   storagePath: text("storage_path"),
+  storageBackend: text("storage_backend").notNull().default("supabase"), // 'supabase' or 'cloudinary'
   uploadedAt: text("uploaded_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   uploadedBy: text("uploaded_by").references(() => users.id),
 });
@@ -85,6 +86,7 @@ export const insertMediaSchema = createInsertSchema(media).omit({
 }).extend({
   data: z.string().optional(),
   storagePath: z.string().optional(),
+  storageBackend: z.enum(["supabase", "cloudinary"]).default("supabase"),
 });
 
 export type InsertMedia = z.infer<typeof insertMediaSchema>;

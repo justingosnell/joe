@@ -123,7 +123,9 @@ export default function Home() {
           {/* Stats */}
           <div className="flex justify-center gap-8 mb-8">
             <div className="text-center">
-              <div className="text-3xl font-bold text-primary">{locations.length}</div>
+              <div className="text-3xl font-bold text-primary">
+                {locations.filter(l => l.photoUrl && l.photoUrl.trim() !== "").length}
+              </div>
               <div className="text-sm text-muted-foreground">Attractions</div>
             </div>
             <div className="text-center">
