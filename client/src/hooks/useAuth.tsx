@@ -105,12 +105,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error("Authentication service not available");
     }
     try {
+      console.log("🔐 Login attempt:", { email, passwordLength: password.length });
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      console.log("🔐 Login response:", { data: !!data, error });
       if (error) throw error;
       // Don't redirect immediately - let the auth state change handle it
       // The auth listener will detect the login and update the UI accordingly
     } catch (error) {
       const authError = error as AuthError;
+      console.error("❌ Login error details:", authError);
       throw new Error(authError.message || "Login failed");
     }
   };
