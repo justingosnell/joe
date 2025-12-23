@@ -38,16 +38,16 @@ export function AppHeader() {
     await logout();
   };
 
+  const handleGoHome = () => {
+    setLocation("/");
+  };
+
   const handleGoToAdmin = () => {
     setLocation("/admin");
   };
 
   const handleChangePassword = () => {
     setIsLoginModalOpen(true);
-  };
-
-  const handleGoHome = () => {
-    setLocation("/");
   };
 
   return (

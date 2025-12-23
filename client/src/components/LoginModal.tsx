@@ -43,6 +43,8 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
       // Reset form
       setLoginUsername("");
       setLoginPassword("");
+      // Redirect to admin page
+      window.location.href = "/admin";
     } catch (error) {
       toast({
         title: "Login failed",
@@ -175,11 +177,11 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
             <TabsContent value="login" className="space-y-4">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
+                  <Label htmlFor="username">Email</Label>
                   <Input
                     id="username"
-                    type="text"
-                    placeholder="Enter your username"
+                    type="email"
+                    placeholder="Enter your email"
                     value={loginUsername}
                     onChange={(e) => setLoginUsername(e.target.value)}
                     required
@@ -267,11 +269,11 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
                 }
               }} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-username-change">Username</Label>
+                  <Label htmlFor="login-username-change">Email</Label>
                   <Input
                     id="login-username-change"
-                    type="text"
-                    placeholder="Enter your username"
+                    type="email"
+                    placeholder="Enter your email"
                     value={loginUsername}
                     onChange={(e) => setLoginUsername(e.target.value)}
                     required

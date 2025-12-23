@@ -8,6 +8,7 @@ import helmet from "helmet";
 import { storage, ensureStorageReady } from "./storage";
 import { runMigrations, initializeDatabase } from "./db";
 import { uploadFileToSupabase, getPublicUrl } from "./supabase-client";
+import { verifySupabaseToken, getSupabaseSession, supabaseAdmin } from "./supabase-auth";
 import { geocodeLocation, isValidUSCoordinates } from "./geocoding";
 import { imageCache } from "./image-cache";
 import { shouldUseCloudinary, getStorageStats } from "./storage-monitor";
@@ -57,24 +58,49 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
     sessionId: req.sessionID,
     userId: req.session.userId,
     cookies: req.headers.cookie ? "✓" : "✗",
+    authHeader: req.headers.authorization ? "✓" : "✗",
   });
-  if (!req.session.userId) {
-    console.log("❌ Auth failed - no userId in session");
-    return res.status(401).json({ message: "Unauthorized" });
+
+  // 1. Check for Express Session
+  if (req.session.userId) {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        console.log("❌ Auth failed - user not found in DB:", req.session.userId);
+        req.session.destroy(() => {});
+        return res.status(401).json({ message: "Unauthorized - User not found" });
+      }
+      return next();
+    } catch (error) {
+      console.error("❌ Auth check error:", error);
+      return res.status(500).json({ message: "Internal Server Error" });
+    }
   }
 
+  // 2. Check for Supabase Token
   try {
-    const user = await storage.getUser(req.session.userId);
-    if (!user) {
-      console.log("❌ Auth failed - user not found in DB:", req.session.userId);
-      req.session.destroy(() => {});
-      return res.status(401).json({ message: "Unauthorized - User not found" });
+    const supabaseSession = await getSupabaseSession(req);
+    if (supabaseSession) {
+      console.log("✅ Supabase token verified for user:", supabaseSession.email);
+      
+      // Ensure user exists in local DB
+      const user = await storage.createSupabaseUser(
+        supabaseSession.id,
+        supabaseSession.email,
+        supabaseSession.username
+      );
+      
+      // Set session userId for this request context
+      req.session.userId = user.id;
+      
+      return next();
     }
-    next();
   } catch (error) {
-    console.error("❌ Auth check error:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    console.error("❌ Supabase auth check error:", error);
   }
+
+  console.log("❌ Auth failed - no session or valid token");
+  return res.status(401).json({ message: "Unauthorized" });
 }
 
 // Configure multer for file uploads - using dynamic import
@@ -148,7 +174,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "blob:"],
+        workerSrc: ["'self'", "blob:"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://unpkg.com"],
         imgSrc: ["'self'", "data:", "https:", "blob:"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
@@ -358,6 +385,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Change password error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
+  });
+
+  // ============ Supabase Auth Routes (Token-Based) ============
+  
+  // Get current user from Supabase token
+  app.get("/api/auth/user", verifySupabaseToken, (req: Request, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    res.json({ user: req.user });
+  });
+
+  // Verify token endpoint (for checking auth status)
+  app.post("/api/auth/verify", verifySupabaseToken, (req: Request, res: Response) => {
+    res.json({ authenticated: true, user: req.user });
   });
 
   // Middleware to check if user is admin

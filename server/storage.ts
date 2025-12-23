@@ -47,6 +47,9 @@ export interface IStorage {
   createCategory(category: InsertCategory): Promise<Category>;
   updateCategory(id: string, category: Partial<InsertCategory>): Promise<Category | undefined>;
   deleteCategory(id: string): Promise<boolean>;
+
+  // Supabase Auth Support
+  createSupabaseUser(id: string, email: string, username?: string): Promise<User>;
 }
 
 export class MemStorage implements IStorage {
@@ -65,6 +68,27 @@ export class MemStorage implements IStorage {
     this.seedDefaultAdmin();
     this.seedDefaultCategories();
     this.seedMockLocations();
+  }
+
+  async createSupabaseUser(id: string, email: string, username?: string): Promise<User> {
+    const existing = this.users.get(id);
+    if (existing) return existing;
+
+    const now = new Date().toISOString();
+    const user: User = {
+      id,
+      username: username || email,
+      password: "supabase-managed",
+      role: "admin",
+      isLocked: "false",
+      failedLoginAttempts: "0",
+      lastFailedLogin: null,
+      lastPasswordChange: now,
+      mustChangePassword: "false",
+      createdAt: now,
+    };
+    this.users.set(id, user);
+    return user;
   }
 
   // Seed default admin account (only if INIT_ADMIN_USERNAME env var is set)
@@ -849,6 +873,28 @@ export class DbStorage implements IStorage {
   }
 
   // User methods
+  async createSupabaseUser(id: string, email: string, username?: string): Promise<User> {
+    // Check if user exists
+    const existing = await this.getUser(id);
+    if (existing) return existing;
+
+    // Create user
+    const now = new Date().toISOString();
+    const result = await db.insert(users).values({
+      id,
+      username: username || email,
+      password: "supabase-managed",
+      role: "admin", // Defaulting to admin
+      isLocked: "false",
+      failedLoginAttempts: "0",
+      lastFailedLogin: null,
+      lastPasswordChange: now,
+      mustChangePassword: "false",
+      createdAt: now,
+    }).returning();
+    return result[0];
+  }
+
   async getUser(id: string): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
     return result[0];

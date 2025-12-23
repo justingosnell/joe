@@ -86,7 +86,6 @@ function MapController({
         animate: true,
       });
     } else if (locations.length > 0) {
-      // Fit bounds with all locations visible
       const bounds = L.latLngBounds(
         locations.map((loc) => [loc.latitude, loc.longitude])
       );
@@ -97,48 +96,46 @@ function MapController({
   return null;
 }
 
-interface MapProps {
-  locations: Location[];
-  selectedLocation: Location | null;
-  onLocationClick: (location: Location | null) => void;
-}
-
-function InteractiveMap({
+function ZoomAwareMarkersController({
   locations,
   selectedLocation,
   onLocationClick,
-  terrain = "standard",
-}: MapProps & { terrain?: "standard" | "satellite" }) {
-  const { getColorBySlug } = useCategoryColors();
+  getColorBySlug,
+}: {
+  locations: Location[];
+  selectedLocation: Location | null;
+  onLocationClick: (location: Location | null) => void;
+  getColorBySlug: (slug: string) => string;
+}) {
+  const map = useMap();
+  const [zoom, setZoom] = useState(map.getZoom());
 
-  const tileLayerConfig: Record<"standard" | "satellite", { url: string; attribution: string }> = {
-    standard: {
-      url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    },
-    satellite: {
-      url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      attribution: '&copy; Esri',
-    },
-  };
+  useEffect(() => {
+    const handleZoom = () => setZoom(map.getZoom());
+    map.on("zoom", handleZoom);
+    return () => {
+      map.off("zoom", handleZoom);
+    };
+  }, [map]);
 
-  const config = tileLayerConfig[terrain];
+  const visibleLocations = useMemo(() => {
+    if (zoom >= 12) return locations;
+    
+    const grouped = new Map<string, Location[]>();
+    locations.forEach((loc) => {
+      const key = `${Math.round(loc.latitude * 100)},${Math.round(loc.longitude * 100)}`;
+      if (!grouped.has(key)) {
+        grouped.set(key, []);
+      }
+      grouped.get(key)!.push(loc);
+    });
+
+    return Array.from(grouped.values()).map((group) => group[0]);
+  }, [locations, zoom]);
 
   return (
-    <MapContainer
-      center={[39.8283, -98.5795] as [number, number]}
-      zoom={6}
-      className="h-full w-full rounded"
-      zoomControl={true}
-    >
-      <TileLayer
-        url={config.url}
-        attribution={config.attribution}
-      />
-
-      <MapController locations={locations} selectedLocation={selectedLocation} />
-
-      {locations.map((location) => (
+    <>
+      {visibleLocations.map((location) => (
         <Marker
           key={location.id}
           position={[location.latitude, location.longitude] as [number, number]}
@@ -163,6 +160,67 @@ function InteractiveMap({
           </Popup>
         </Marker>
       ))}
+    </>
+  );
+}
+
+
+
+interface MapProps {
+  locations: Location[];
+  selectedLocation: Location | null;
+  onLocationClick: (location: Location | null) => void;
+}
+
+function InteractiveMap({
+  locations,
+  selectedLocation,
+  onLocationClick,
+  style = "openstreetmap",
+}: MapProps & { style?: "openstreetmap" | "satellite" | "topo" | "humanitarian" }) {
+  const { getColorBySlug } = useCategoryColors();
+
+  const tileLayerConfig: Record<"openstreetmap" | "satellite" | "topo" | "humanitarian", { url: string; attribution: string }> = {
+    openstreetmap: {
+      url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    },
+    satellite: {
+      url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+      attribution: '&copy; Esri',
+    },
+    topo: {
+      url: "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+      attribution: '&copy; <a href="https://www.opentopomap.org/copyright">OpenTopoMap</a> contributors',
+    },
+    humanitarian: {
+      url: "https://tiles.openstreetmap.fr/hot/{z}/{x}/{y}.png",
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    },
+  };
+
+  const config = tileLayerConfig[style];
+
+  return (
+    <MapContainer
+      center={[39.8283, -98.5795] as [number, number]}
+      zoom={8}
+      className="h-full w-full rounded"
+      zoomControl={true}
+    >
+      <TileLayer
+        url={config.url}
+        attribution={config.attribution}
+      />
+
+      <MapController locations={locations} selectedLocation={selectedLocation} />
+
+      <ZoomAwareMarkersController
+        locations={locations}
+        selectedLocation={selectedLocation}
+        onLocationClick={onLocationClick}
+        getColorBySlug={getColorBySlug}
+      />
     </MapContainer>
   );
 }
@@ -170,7 +228,7 @@ function InteractiveMap({
 export function HomeMapSection() {
   const [category, setCategory] = useState("all");
   const [state, setState] = useState("all");
-  const [terrain, setTerrain] = useState<"standard" | "satellite">("standard");
+  const [mapStyle, setMapStyle] = useState<"openstreetmap" | "satellite" | "topo" | "humanitarian">("openstreetmap");
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(
     null
@@ -271,13 +329,15 @@ export function HomeMapSection() {
                 </SelectContent>
               </Select>
 
-              <Select value={terrain} onValueChange={(val) => setTerrain(val as "standard" | "satellite")}>
+              <Select value={mapStyle} onValueChange={(val) => setMapStyle(val as "openstreetmap" | "satellite" | "topo" | "humanitarian")}>
                 <SelectTrigger className="w-48">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="standard">Standard</SelectItem>
+                  <SelectItem value="openstreetmap">Standard</SelectItem>
                   <SelectItem value="satellite">Satellite</SelectItem>
+                  <SelectItem value="topo">Topographic</SelectItem>
+                  <SelectItem value="humanitarian">Humanitarian</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -289,7 +349,7 @@ export function HomeMapSection() {
                     setState("all");
                   }}
                 >
-                  <X className="h-4 w-4 mr-2" />
+                  <X className="h-5 w-5 mr-2" />
                   Clear Filters
                 </Button>
               )}
@@ -310,7 +370,7 @@ export function HomeMapSection() {
               locations={filteredLocations}
               selectedLocation={selectedLocation}
               onLocationClick={setSelectedLocation}
-              terrain={terrain}
+              style={mapStyle}
             />
           </div>
         </div>
@@ -356,13 +416,15 @@ export function HomeMapSection() {
           </SelectContent>
         </Select>
 
-        <Select value={terrain} onValueChange={(val) => setTerrain(val as "standard" | "satellite")}>
+        <Select value={mapStyle} onValueChange={(val) => setMapStyle(val as "openstreetmap" | "satellite" | "topo" | "humanitarian")}>
           <SelectTrigger className="w-48">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="standard">Standard</SelectItem>
+            <SelectItem value="openstreetmap">Standard</SelectItem>
             <SelectItem value="satellite">Satellite</SelectItem>
+            <SelectItem value="topo">Topographic</SelectItem>
+            <SelectItem value="humanitarian">Humanitarian</SelectItem>
           </SelectContent>
         </Select>
 
@@ -374,7 +436,7 @@ export function HomeMapSection() {
               setState("all");
             }}
           >
-            <X className="h-4 w-4 mr-2" />
+            <X className="h-5 w-5 mr-2" />
             Clear Filters
           </Button>
         )}
@@ -396,7 +458,7 @@ export function HomeMapSection() {
             locations={filteredLocations}
             selectedLocation={selectedLocation}
             onLocationClick={setSelectedLocation}
-            terrain={terrain}
+            style={mapStyle}
           />
         </div>
       </Card>

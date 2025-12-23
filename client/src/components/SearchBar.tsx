@@ -105,7 +105,7 @@ export function SearchBar() {
                               if (window.innerWidth < 768) setIsExpanded(false);
                           }}
                        >
-                          <X className="h-4 w-4" />
+                          <X className="h-5 w-5" />
                        </Button>
                   )}
               </div>

@@ -296,7 +296,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
                 className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7"
                 onClick={() => handleSearch("")}
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </Button>
             )}
           </div>
@@ -390,7 +390,7 @@ export function MediaLibraryPanel({ onSelect, mode = "manage" }: MediaLibraryPan
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold">Edit Media Details</h3>
                 <Button variant="ghost" size="icon" onClick={() => setEditingMedia(null)}>
-                  <X className="h-4 w-4" />
+                  <X className="h-5 w-5" />
                 </Button>
               </div>
               <div className="space-y-3">

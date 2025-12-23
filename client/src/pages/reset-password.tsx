@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -6,63 +6,42 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Lock, Mail, Eye, EyeOff } from "lucide-react";
+import { Lock, Eye, EyeOff } from "lucide-react";
 
-export default function Login() {
-  const [email, setEmail] = useState("");
+export default function ResetPassword() {
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { login, resetPassword } = useAuth();
+  const { updatePassword } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      await login(email, password);
-      console.log("✅ Login successful");
+    
+    if (password !== confirmPassword) {
       toast({
-        title: "Login successful",
-        description: "Welcome back!",
-      });
-    } catch (error) {
-      console.error("❌ Login error:", error);
-      const errorMsg = error instanceof Error ? error.message : "Invalid credentials";
-      console.error("Error message:", errorMsg);
-      toast({
-        title: "Login failed",
-        description: errorMsg,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    if (!email) {
-      toast({
-        title: "Enter your email",
-        description: "Please enter your email address to reset your password.",
+        title: "Passwords do not match",
+        description: "Please make sure your passwords match.",
         variant: "destructive",
       });
       return;
     }
 
     setIsLoading(true);
+
     try {
-      await resetPassword(email);
+      await updatePassword(password);
       toast({
-        title: "Email sent",
-        description: "Check your email for password reset instructions.",
+        title: "Password updated",
+        description: "Your password has been successfully reset. You can now login.",
       });
+      setLocation("/login");
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to send reset email",
+        description: error instanceof Error ? error.message : "Failed to update password",
         variant: "destructive",
       });
     } finally {
@@ -74,46 +53,25 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="p-3 bg-primary rounded-full">
-              <MapPin className="h-8 w-8 text-primary-foreground" />
-            </div>
-          </div>
-          <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
+          <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
           <CardDescription>
-            <button
-              onClick={() => setLocation("/")}
-              className="text-primary hover:underline mt-2"
-            >
-              Return to Homepage
-            </button>
+            Enter your new password below.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isLoading}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">New Password</Label>
               <div className="relative">
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
+                  placeholder="Enter new password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={isLoading}
+                  minLength={6}
                 />
                 <button
                   type="button"
@@ -129,30 +87,41 @@ export default function Login() {
                 </button>
               </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                disabled={isLoading}
+                minLength={6}
+              />
+            </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Lock className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
+                  Updating...
                 </>
               ) : (
                 <>
                   <Lock className="mr-2 h-4 w-4" />
-                  Sign In
+                  Update Password
                 </>
               )}
             </Button>
-
-            <Button
-              type="button"
-              variant="link"
+            
+            <Button 
+              type="button" 
+              variant="ghost" 
+              onClick={() => setLocation("/login")} 
               className="w-full"
-              onClick={handleForgotPassword}
-              disabled={isLoading}
             >
-              <Mail className="mr-2 h-4 w-4" />
-              Forgot your password?
+              Back to Login
             </Button>
           </form>
         </CardContent>

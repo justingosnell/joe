@@ -11,9 +11,9 @@ import Map from "@/pages/map";
 import Login from "@/pages/login";
 import Admin from "@/pages/admin";
 import Categories from "@/pages/categories";
+import ResetPassword from "@/pages/reset-password";
 import NotFound from "@/pages/not-found";
 
-// Protected route wrapper
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user, isLoading } = useAuth();
 
@@ -39,6 +39,7 @@ function Router() {
         <Route path="/" component={Home} />
         <Route path="/map" component={Map} />
         <Route path="/login" component={Login} />
+        <Route path="/auth/reset-password" component={ResetPassword} />
         <Route path="/admin">
           {() => <ProtectedRoute component={Admin} />}
         </Route>

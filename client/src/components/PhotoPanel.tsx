@@ -66,7 +66,7 @@ export function PhotoPanel({ location, onClose }: PhotoPanelProps) {
               {showOverlay && (
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               )}
-              <div className="absolute bottom-4 left-4 right-4">
+              <div className="absolute bottom-4 left-4 right-4 text-center">
                 {showOverlay && (
                   <Badge 
                     className="mb-2 text-white"
@@ -76,7 +76,7 @@ export function PhotoPanel({ location, onClose }: PhotoPanelProps) {
                     {getCategoryLabel(location.category)}
                   </Badge>
                 )}
-                <h2 className="luckiest-guy-regular text-2xl font-bold text-white drop-shadow-md" data-testid="text-location-name">
+                <h2 className="luckiest-guy-regular text-4xl font-bold text-white drop-shadow-md" data-testid="text-location-name">
                   {location.name}
                 </h2>
               </div>
