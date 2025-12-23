@@ -16,13 +16,25 @@ services:
         sync: true
       - key: SUPABASE_KEY
         sync: true
+      - key: SUPABASE_SERVICE_KEY
+        sync: true
       - key: SUPABASE_BUCKET
+        sync: true
+      - key: VITE_SUPABASE_URL
+        sync: true
+      - key: VITE_SUPABASE_ANON_KEY
         sync: true
       - key: SESSION_SECRET
         sync: true
       - key: INIT_ADMIN_USERNAME
         sync: true
       - key: INIT_ADMIN_PASSWORD
+        sync: true
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: true
+      - key: CLOUDINARY_API_KEY
+        sync: true
+      - key: CLOUDINARY_API_SECRET
         sync: true
     nixpacks:
       aptPackages:
