@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { getApiUrl } from "@/lib/api";
+import { getApiUrl, apiFetch } from "@/lib/api";
 import { LogOut, Plus, MapPin, Search, X, Image as ImageIcon, Upload, FileUp, FolderTree, Home, RefreshCw, ArrowUp } from "lucide-react";
 import { LocationTable } from "@/components/LocationTable";
 import { LocationDialog } from "@/components/LocationDialog";
@@ -54,7 +54,7 @@ export default function Admin() {
   const { data: allLocations = [], isLoading } = useQuery<Location[]>({
     queryKey: ["locations"],
     queryFn: async () => {
-      const response = await fetch(getApiUrl("/api/locations"));
+      const response = await apiFetch("/api/locations");
       if (!response.ok) throw new Error("Failed to fetch locations");
       return response.json();
     },
@@ -64,7 +64,7 @@ export default function Admin() {
   const { data: settings } = useQuery<Record<string, string>>({
     queryKey: ["settings"],
     queryFn: async () => {
-      const response = await fetch(getApiUrl("/api/settings"));
+      const response = await apiFetch("/api/settings");
       if (!response.ok) return {};
       return response.json();
     },
@@ -74,7 +74,7 @@ export default function Admin() {
   const { data: allMedia = [] } = useQuery<Media[]>({
     queryKey: ["media"],
     queryFn: async () => {
-      const response = await fetch(getApiUrl("/api/media"));
+      const response = await apiFetch("/api/media");
       if (!response.ok) throw new Error("Failed to fetch media");
       return response.json();
     },
@@ -146,7 +146,7 @@ export default function Admin() {
   // Create location mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertLocation) => {
-      const response = await fetch(getApiUrl("/api/locations"), {
+      const response = await apiFetch("/api/locations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -171,7 +171,7 @@ export default function Admin() {
   // Update location mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<InsertLocation> }) => {
-      const response = await fetch(`/api/locations/${id}`, {
+      const response = await apiFetch(`/api/locations/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -197,7 +197,7 @@ export default function Admin() {
   // Delete location mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/locations/${id}`, {
+      const response = await apiFetch(`/api/locations/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -219,7 +219,7 @@ export default function Admin() {
   // Re-geocode invalid locations mutation
   const regeocodeMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(getApiUrl("/api/locations/regeocode-invalid"), {
+      const response = await apiFetch("/api/locations/regeocode-invalid", {
         method: "POST",
         credentials: "include",
       });
@@ -244,7 +244,7 @@ export default function Admin() {
   // Toggle bookmark mutation
   const bookmarkMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/locations/${id}/bookmark`, {
+      const response = await apiFetch(`/api/locations/${id}/bookmark`, {
         method: "PUT",
         credentials: "include",
       });

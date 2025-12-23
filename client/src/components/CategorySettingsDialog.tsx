@@ -25,7 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { getApiUrl } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import type { Category, Media } from "@shared/schema";
 import { Upload, Trash2, Image as ImageIcon } from "lucide-react";
@@ -70,9 +70,7 @@ export function CategorySettingsDialog({
   const { data: allMedia = [] } = useQuery<Media[]>({
     queryKey: ["media"],
     queryFn: async () => {
-      const response = await fetch(getApiUrl("/api/media"), {
-        credentials: "include",
-      });
+      const response = await apiFetch("/api/media");
       if (!response.ok) throw new Error("Failed to fetch media");
       return response.json();
     },
@@ -127,10 +125,9 @@ export function CategorySettingsDialog({
       const formData = new FormData();
       formData.append("image", compressedFile, file.name);
 
-      const response = await fetch(getApiUrl("/api/upload"), {
+      const response = await apiFetch("/api/upload", {
         method: "POST",
         body: formData,
-        credentials: "include",
       });
 
       if (!response.ok) {
@@ -178,10 +175,9 @@ export function CategorySettingsDialog({
       const formData = new FormData();
       formData.append("image", compressedFile, file.name);
 
-      const response = await fetch(getApiUrl("/api/upload"), {
+      const response = await apiFetch("/api/upload", {
         method: "POST",
         body: formData,
-        credentials: "include",
       });
 
       if (!response.ok) {

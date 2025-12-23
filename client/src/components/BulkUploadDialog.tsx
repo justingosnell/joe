@@ -11,7 +11,7 @@ import {
 import { Upload, FileText, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { getApiUrl } from "@/lib/api";
+import { getApiUrl, apiFetch } from "@/lib/api";
 
 interface BulkUploadDialogProps {
   open: boolean;
@@ -34,7 +34,7 @@ export function BulkUploadDialog({ open, onOpenChange }: BulkUploadDialogProps) 
   const uploadMutation = useMutation({
     mutationFn: async (fileContent: string) => {
       try {
-        const response = await fetch(getApiUrl("/api/locations/bulk-upload"), {
+        const response = await apiFetch("/api/locations/bulk-upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ content: fileContent }),

@@ -10,7 +10,7 @@ import { Upload, X, Search, Image as ImageIcon, Trash2, Edit2, Check } from "luc
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getApiUrl } from "@/lib/api";
+import { getApiUrl, apiFetch } from "@/lib/api";
 import type { Media } from "@shared/schema";
 
 interface MediaLibraryProps {
@@ -37,7 +37,7 @@ export function MediaLibrary({ open, onOpenChange, onSelect, mode = "select" }: 
     queryKey: ["media"],
     queryFn: async () => {
       console.log("Fetching media from:", getApiUrl("/api/media"));
-      const response = await fetch(getApiUrl("/api/media"), {
+      const response = await apiFetch("/api/media", {
         credentials: "include",
       });
       console.log("Media fetch response status:", response.status);
@@ -68,7 +68,7 @@ export function MediaLibrary({ open, onOpenChange, onSelect, mode = "select" }: 
       const formData = new FormData();
       formData.append("image", file);
 
-      const response = await fetch(getApiUrl("/api/media"), {
+      const response = await apiFetch("/api/media", {
         method: "POST",
         body: formData,
         credentials: "include",
@@ -89,7 +89,7 @@ export function MediaLibrary({ open, onOpenChange, onSelect, mode = "select" }: 
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, alt, caption }: { id: string; alt: string; caption: string }) => {
-      const response = await fetch(`/api/media/${id}`, {
+      const response = await apiFetch(`/api/media/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ alt, caption }),
@@ -116,7 +116,7 @@ export function MediaLibrary({ open, onOpenChange, onSelect, mode = "select" }: 
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/media/${id}`, {
+      const response = await apiFetch(`/api/media/${id}`, {
         method: "DELETE",
         credentials: "include",
       });

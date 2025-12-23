@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { MediaLibraryPanel } from "@/components/MediaLibraryPanel";
-import { getApiUrl } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import type { Media } from "@shared/schema";
 
 interface LogoSelectorDialogProps {
@@ -31,11 +31,10 @@ export function LogoSelectorDialog({
   // Mutation to update the logo setting
   const updateLogoMutation = useMutation({
     mutationFn: async (logoUrl: string) => {
-      const response = await fetch(getApiUrl("/api/settings/site_logo"), {
+      const response = await apiFetch("/api/settings/site_logo", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ value: logoUrl }),
-        credentials: "include",
       });
 
       if (!response.ok) {
@@ -66,11 +65,10 @@ export function LogoSelectorDialog({
   // Mutation to remove the logo
   const removeLogoMutation = useMutation({
     mutationFn: async () => {
-      const response = await fetch(getApiUrl("/api/settings/site_logo"), {
+      const response = await apiFetch("/api/settings/site_logo", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ value: "" }),
-        credentials: "include",
       });
 
       if (!response.ok) {

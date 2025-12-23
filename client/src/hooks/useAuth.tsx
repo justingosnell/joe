@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useLocation } from "wouter";
-import { createClient } from "@supabase/supabase-js";
 import type { AuthError } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 
 interface User {
   id: string;
@@ -18,25 +18,6 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
-}
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-console.log("🔍 Supabase config check:", {
-  url: supabaseUrl ? "✓" : "✗",
-  key: supabaseAnonKey ? "✓" : "✗",
-});
-
-let supabase: any;
-try {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Missing Supabase environment variables");
-  }
-  supabase = createClient(supabaseUrl, supabaseAnonKey);
-} catch (error) {
-  console.error("❌ Failed to create Supabase client:", error);
-  supabase = null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -111,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       // Don't redirect immediately - let the auth state change handle it
       // The auth listener will detect the login and update the UI accordingly
+      setLocation("/admin");
     } catch (error) {
       const authError = error as AuthError;
       console.error("❌ Login error details:", authError);

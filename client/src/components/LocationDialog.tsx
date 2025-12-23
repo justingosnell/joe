@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertLocationSchema, type InsertLocation, type Location, type Media, type Category } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
-import { getApiUrl } from "@/lib/api";
+import { getApiUrl, apiFetch } from "@/lib/api";
 import imageCompression from "browser-image-compression";
 import {
   Dialog,
@@ -126,7 +126,7 @@ export function LocationDialog({
   const { data: categories = DEFAULT_CATEGORIES } = useQuery<Category[]>({
     queryKey: ["categories"],
     queryFn: async () => {
-      const response = await fetch(getApiUrl("/api/categories"));
+      const response = await apiFetch("/api/categories");
       if (!response.ok) throw new Error("Failed to fetch categories");
       return response.json();
     },
@@ -316,7 +316,7 @@ export function LocationDialog({
 
       console.log("Uploading file:", file.name, "Size:", compressedFile.size);
 
-      const response = await fetch(getApiUrl("/api/upload"), {
+      const response = await apiFetch("/api/upload", {
         method: "POST",
         body: formData,
         credentials: "include",

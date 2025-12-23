@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, GripVertical } from "lucide-react";
 import { CategoryDialog } from "@/components/CategoryDialog";
 import { useToast } from "@/hooks/use-toast";
-import { getApiUrl } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import type { Category, InsertCategory } from "@shared/schema";
 import {
   AlertDialog,
@@ -32,7 +32,7 @@ export default function Categories() {
   const { data: categories = [], isLoading } = useQuery<Category[]>({
     queryKey: ["categories"],
     queryFn: async () => {
-      const response = await fetch(getApiUrl("/api/categories"));
+      const response = await apiFetch("/api/categories");
       if (!response.ok) throw new Error("Failed to fetch categories");
       return response.json();
     },
@@ -41,11 +41,10 @@ export default function Categories() {
   // Create category mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertCategory) => {
-      const response = await fetch(getApiUrl("/api/categories"), {
+      const response = await apiFetch("/api/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
-        credentials: "include",
       });
       if (!response.ok) {
         const error = await response.json();
@@ -73,11 +72,10 @@ export default function Categories() {
   // Update category mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: InsertCategory }) => {
-      const response = await fetch(`/api/categories/${id}`, {
+      const response = await apiFetch(`/api/categories/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
-        credentials: "include",
       });
       if (!response.ok) {
         const error = await response.json();
@@ -106,9 +104,8 @@ export default function Categories() {
   // Delete category mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/categories/${id}`, {
+      const response = await apiFetch(`/api/categories/${id}`, {
         method: "DELETE",
-        credentials: "include",
       });
       if (!response.ok) {
         const error = await response.json();

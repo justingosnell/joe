@@ -7,7 +7,7 @@ import { Plus, Pencil, Trash2, GripVertical, Palette } from "lucide-react";
 import { CategoryDialog } from "@/components/CategoryDialog";
 import { CategorySettingsDialog } from "@/components/CategorySettingsDialog";
 import { useToast } from "@/hooks/use-toast";
-import { getApiUrl } from "@/lib/api";
+import { getApiUrl, apiFetch } from "@/lib/api";
 import type { Category, InsertCategory } from "@shared/schema";
 import {
   AlertDialog,
@@ -34,7 +34,7 @@ export function CategoryManagement() {
   const { data: categories = [], isLoading } = useQuery<Category[]>({
     queryKey: ["categories"],
     queryFn: async () => {
-      const response = await fetch(getApiUrl("/api/categories"));
+      const response = await apiFetch("/api/categories");
       if (!response.ok) throw new Error("Failed to fetch categories");
       return response.json();
     },
@@ -43,7 +43,7 @@ export function CategoryManagement() {
   // Create category mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertCategory) => {
-      const response = await fetch(getApiUrl("/api/categories"), {
+      const response = await apiFetch("/api/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -69,7 +69,7 @@ export function CategoryManagement() {
   // Update category mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<InsertCategory> }) => {
-      const response = await fetch(`${getApiUrl("/api/categories")}/${id}`, {
+      const response = await apiFetch(`/api/categories/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -107,7 +107,7 @@ export function CategoryManagement() {
         customIconUrl?: string;
       };
     }) => {
-      const response = await fetch(`${getApiUrl("/api/categories")}/${id}`, {
+      const response = await apiFetch(`/api/categories/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
@@ -140,7 +140,7 @@ export function CategoryManagement() {
   // Delete category mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`${getApiUrl("/api/categories")}/${id}`, {
+      const response = await apiFetch(`/api/categories/${id}`, {
         method: "DELETE",
         credentials: "include",
       });
