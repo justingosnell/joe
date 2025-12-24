@@ -1,7 +1,6 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, ReactNode } from "react";
 import { useLocation } from "wouter";
-import type { AuthError } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
+import { useUser, useClerk } from "@clerk/clerk-react";
 
 interface User {
   id: string;
@@ -23,136 +22,43 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user: clerkUser, isLoaded } = useUser();
+  const { signOut } = useClerk();
   const [, setLocation] = useLocation();
 
-  useEffect(() => {
-    let mounted = true;
-
-    const setupAuthListener = () => {
-      if (!supabase) {
-        console.error("❌ Supabase client not initialized");
-        setIsLoading(false);
-        return null;
-      }
-
-      try {
-        console.log("🔐 Setting up Supabase auth listener...");
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          (event, session) => {
-            if (!mounted) return;
-
-            console.log("🔔 Auth state changed:", event, session?.user?.email);
-            if (session?.user) {
-              setUser({
-                id: session.user.id,
-                email: session.user.email || "",
-                username: session.user.user_metadata?.username,
-              });
-              setToken(session.access_token);
-            } else {
-              setUser(null);
-              setToken(null);
-            }
-            setIsLoading(false);
-          }
-        );
-
-        console.log("✅ Auth listener set up successfully");
-        return subscription;
-      } catch (error) {
-        console.error("❌ Failed to set up auth listener:", error);
-        setIsLoading(false);
-        return null;
-      }
-    };
-
-    const subscription = setupAuthListener();
-
-    return () => {
-      mounted = false;
-      try {
-        subscription?.unsubscribe?.();
-      } catch (error) {
-        console.error("Error unsubscribing:", error);
-      }
-    };
-  }, []);
+  const user = clerkUser ? {
+    id: clerkUser.id,
+    email: clerkUser.emailAddresses[0]?.emailAddress || "",
+    username: clerkUser.username || clerkUser.firstName || undefined,
+  } : null;
 
   const login = async (email: string, password: string) => {
-    if (!supabase) {
-      throw new Error("Authentication service not available");
-    }
-    try {
-      console.log("🔐 Login attempt:", { email, passwordLength: password.length });
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      console.log("🔐 Login response:", { data: !!data, error });
-      if (error) throw error;
-      // Don't redirect immediately - let the auth state change handle it
-      // The auth listener will detect the login and update the UI accordingly
-      setLocation("/admin");
-    } catch (error) {
-      const authError = error as AuthError;
-      console.error("❌ Login error details:", authError);
-      throw new Error(authError.message || "Login failed");
-    }
+    throw new Error("Use Clerk's sign-in modal instead");
   };
 
   const logout = async () => {
-    if (!supabase) {
-      setUser(null);
-      setToken(null);
-      setLocation("/login");
-      return;
-    }
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await signOut();
+      setLocation("/");
     } catch (error) {
       console.error("Logout error:", error);
-    } finally {
-      setUser(null);
-      setToken(null);
-      setLocation("/login");
     }
   };
 
   const resetPassword = async (email: string) => {
-    if (!supabase) {
-      throw new Error("Authentication service not available");
-    }
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
-      });
-      if (error) throw error;
-    } catch (error) {
-      const authError = error as AuthError;
-      throw new Error(authError.message || "Password reset failed");
-    }
+    throw new Error("Password reset not available");
   };
 
   const updatePassword = async (newPassword: string) => {
-    if (!supabase) {
-      throw new Error("Authentication service not available");
-    }
-    try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) throw error;
-    } catch (error) {
-      const authError = error as AuthError;
-      throw new Error(authError.message || "Password update failed");
-    }
+    throw new Error("Password update not available");
   };
 
   const changePassword = async (currentPassword: string, newPassword: string) => {
-    await updatePassword(newPassword);
+    throw new Error("Password change not available");
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout, resetPassword, updatePassword, changePassword }}>
+    <AuthContext.Provider value={{ user, token: null, isLoading: !isLoaded, login, logout, resetPassword, updatePassword, changePassword }}>
       {children}
     </AuthContext.Provider>
   );

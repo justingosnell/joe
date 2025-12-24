@@ -1,4 +1,5 @@
 import { Switch, Route, Redirect } from "wouter";
+import { ClerkProvider } from "@clerk/clerk-react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -13,6 +14,12 @@ import Admin from "@/pages/admin";
 import Categories from "@/pages/categories";
 import ResetPassword from "@/pages/reset-password";
 import NotFound from "@/pages/not-found";
+
+const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+if (!publishableKey) {
+  throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY environment variable");
+}
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user, isLoading } = useAuth();
@@ -54,16 +61,18 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="dark">
-        <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ClerkProvider publishableKey={publishableKey}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider defaultTheme="dark">
+          <AuthProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ClerkProvider>
   );
 }
 
