@@ -1,12 +1,5 @@
 import { SignIn } from "@clerk/clerk-react";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 interface LoginModalProps {
   open: boolean;
@@ -16,33 +9,43 @@ interface LoginModalProps {
 export function LoginModal({ open, onOpenChange }: LoginModalProps) {
   const { user } = useAuth();
 
+  if (!open) return null;
+
   if (user) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Already Signed In</DialogTitle>
-            <DialogDescription>
-              You are already logged in as {user.email}
-            </DialogDescription>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Visit the admin dashboard to manage locations.
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="bg-background rounded-lg p-6 max-w-sm">
+          <h2 className="text-lg font-semibold mb-2">Already Signed In</h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            You are already logged in as {user.email}
           </p>
-        </DialogContent>
-      </Dialog>
+          <button
+            onClick={() => onOpenChange(false)}
+            className="w-full px-4 py-2 bg-primary text-primary-foreground rounded"
+          >
+            Close
+          </button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] p-0">
-        <SignIn
-          afterSignInUrl="/admin"
-          signUpUrl="/sign-up"
-          routing="hash"
-        />
-      </DialogContent>
-    </Dialog>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-background rounded-lg w-full max-w-md">
+        <button
+          onClick={() => onOpenChange(false)}
+          className="float-right p-4 text-muted-foreground hover:text-foreground"
+        >
+          ✕
+        </button>
+        <div className="p-6 pt-0">
+          <SignIn
+            afterSignInUrl="/admin"
+            routing="hash"
+          />
+        </div>
+      </div>
+    </div>
   );
 }
