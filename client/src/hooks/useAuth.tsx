@@ -1,6 +1,6 @@
 import { createContext, useContext, ReactNode } from "react";
 import { useLocation } from "wouter";
-import { useUser, useClerk } from "@clerk/clerk-react";
+import { useAuth0 } from "@auth0/auth0-react";
 
 interface User {
   id: string;
@@ -22,24 +22,22 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { user: clerkUser, isLoaded } = useUser();
-  const { signOut } = useClerk();
+  const { user: auth0User, isLoading, logout: auth0Logout } = useAuth0();
   const [, setLocation] = useLocation();
 
-  const user = clerkUser ? {
-    id: clerkUser.id,
-    email: clerkUser.emailAddresses[0]?.emailAddress || "",
-    username: clerkUser.username || clerkUser.firstName || undefined,
+  const user = auth0User ? {
+    id: auth0User.sub || "",
+    email: auth0User.email || "",
+    username: auth0User.nickname || auth0User.name || undefined,
   } : null;
 
   const login = async (email: string, password: string) => {
-    throw new Error("Use Clerk's sign-in modal instead");
+    throw new Error("Use Auth0 login instead");
   };
 
   const logout = async () => {
     try {
-      await signOut();
-      setLocation("/");
+      await auth0Logout({ logoutParams: { returnTo: window.location.origin } });
     } catch (error) {
       console.error("Logout error:", error);
     }
@@ -58,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token: null, isLoading: !isLoaded, login, logout, resetPassword, updatePassword, changePassword }}>
+    <AuthContext.Provider value={{ user, token: null, isLoading, login, logout, resetPassword, updatePassword, changePassword }}>
       {children}
     </AuthContext.Provider>
   );

@@ -24,7 +24,9 @@ services:
         sync: true
       - key: VITE_SUPABASE_ANON_KEY
         sync: true
-      - key: VITE_CLERK_PUBLISHABLE_KEY
+      - key: VITE_AUTH0_DOMAIN
+        sync: true
+      - key: VITE_AUTH0_CLIENT_ID
         sync: true
       - key: SESSION_SECRET
         sync: true

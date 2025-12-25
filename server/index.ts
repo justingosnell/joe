@@ -27,7 +27,7 @@ if (process.env.NODE_ENV === 'production') {
 app.use((req, res, next) => {
   res.setHeader(
     'Content-Security-Policy',
-    "script-src 'self' 'unsafe-inline' blob: https://*.clerk.accounts.dev; connect-src 'self' https://*.clerk.accounts.dev; img-src 'self' data: https:; font-src 'self' data:"
+    "script-src 'self' 'unsafe-inline' blob: https://*.auth0.com; connect-src 'self' https://*.auth0.com; img-src 'self' data: https:; font-src 'self' data:"
   );
   next();
 });

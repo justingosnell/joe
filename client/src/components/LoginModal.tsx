@@ -1,5 +1,6 @@
-import { SignIn } from "@clerk/clerk-react";
+import { useAuth0 } from "@auth0/auth0-react";
 import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
 interface LoginModalProps {
   open: boolean;
@@ -8,6 +9,7 @@ interface LoginModalProps {
 
 export function LoginModal({ open, onOpenChange }: LoginModalProps) {
   const { user } = useAuth();
+  const { loginWithRedirect } = useAuth0();
 
   if (!open) return null;
 
@@ -30,21 +32,30 @@ export function LoginModal({ open, onOpenChange }: LoginModalProps) {
     );
   }
 
+  const handleLogin = async () => {
+    await loginWithRedirect({
+      appState: { returnTo: "/admin" },
+    });
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-background rounded-lg w-full max-w-md">
-        <button
-          onClick={() => onOpenChange(false)}
-          className="float-right p-4 text-muted-foreground hover:text-foreground"
-        >
-          ✕
-        </button>
-        <div className="p-6 pt-0">
-          <SignIn
-            afterSignInUrl="/admin"
-            routing="hash"
-          />
+      <div className="bg-background rounded-lg w-full max-w-md p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold">Admin Access</h2>
+          <button
+            onClick={() => onOpenChange(false)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            ✕
+          </button>
         </div>
+        <p className="text-sm text-muted-foreground mb-6">
+          Login to manage locations
+        </p>
+        <Button onClick={handleLogin} className="w-full">
+          Sign In with Auth0
+        </Button>
       </div>
     </div>
   );
