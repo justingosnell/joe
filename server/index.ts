@@ -25,6 +25,14 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 app.use((req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "script-src 'self' 'unsafe-inline' blob: https://*.clerk.accounts.dev; connect-src 'self' https://*.clerk.accounts.dev; img-src 'self' data: https:; font-src 'self' data:"
+  );
+  next();
+});
+
+app.use((req, res, next) => {
   const origin = req.headers.origin;
   const allowedOrigins = [
     'http://localhost:5173',
