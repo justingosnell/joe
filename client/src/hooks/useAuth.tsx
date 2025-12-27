@@ -23,13 +23,18 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { user: auth0User, isLoading, logout: auth0Logout, getAccessToken } = useAuth0();
+  const { user: auth0User, isLoading, logout: auth0Logout, getAccessTokenSilently } = useAuth0();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
     const updateToken = async () => {
       try {
-        const token = await getAccessToken();
+        const token = await getAccessTokenSilently({
+          authorizationParams: {
+            audience: (import.meta as any).env?.VITE_AUTH0_AUDIENCE || 'https://joebosse-app.us.auth0.com/api/v2/',
+            scope: 'openid profile email',
+          },
+        });
         setAuthToken(token);
       } catch (error) {
         console.error("Failed to get Auth0 token:", error);
@@ -42,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else if (!auth0User) {
       setAuthToken(null);
     }
-  }, [auth0User, isLoading, getAccessToken]);
+  }, [auth0User, isLoading, getAccessTokenSilently]);
 
   const user = auth0User ? {
     id: auth0User.sub || "",
