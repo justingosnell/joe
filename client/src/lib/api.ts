@@ -15,9 +15,19 @@ export function getApiUrl(endpoint: string): string {
   return `${baseUrl}${endpoint}`;
 }
 
+let authToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+}
+
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
   const url = getApiUrl(endpoint);
   const headers = new Headers(options.headers);
+
+  if (authToken) {
+    headers.set('Authorization', `Bearer ${authToken}`);
+  }
 
   return fetch(url, {
     ...options,

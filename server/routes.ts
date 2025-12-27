@@ -20,6 +20,7 @@ import fs from "fs";
 import crypto from "crypto";
 import { fileURLToPath } from "url";
 import { Readable } from "stream";
+import jwt from "jsonwebtoken";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,6 +53,76 @@ declare module "express-session" {
   }
 }
 
+// Auth0 JWKS cache
+let auth0PublicKey: string | null = null;
+let jwksCacheTime: number = 0;
+const JWKS_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
+async function getAuth0PublicKey(): Promise<string> {
+  const now = Date.now();
+  if (auth0PublicKey && (now - jwksCacheTime) < JWKS_CACHE_DURATION) {
+    return auth0PublicKey;
+  }
+
+  const domain = process.env.VITE_AUTH0_DOMAIN;
+  if (!domain) {
+    throw new Error("VITE_AUTH0_DOMAIN not configured");
+  }
+
+  const jwksUrl = `https://${domain}/.well-known/jwks.json`;
+  console.log("🔐 Fetching Auth0 JWKS from:", jwksUrl);
+
+  try {
+    const response = await fetch(jwksUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch JWKS: ${response.status}`);
+    }
+
+    const jwks = await response.json();
+    const rsaKey = jwks.keys.find((key: any) => key.kty === 'RSA' && key.use === 'sig');
+
+    if (!rsaKey) {
+      throw new Error("No RSA signing key found in JWKS");
+    }
+
+    // Convert JWKS to PEM format
+    const n = rsaKey.n;
+    const e = rsaKey.e;
+
+    // Base64 decode and convert to Buffer
+    const modulus = Buffer.from(n, 'base64');
+    const exponent = Buffer.from(e, 'base64');
+
+    // Create PEM public key
+    const pemHeader = '-----BEGIN RSA PUBLIC KEY-----\n';
+    const pemFooter = '\n-----END RSA PUBLIC KEY-----\n';
+
+    // DER encoding for RSA public key
+    const derHeader = Buffer.from([0x30, 0x82, 0x01, 0x22, 0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00, 0x03, 0x82, 0x01, 0x0f, 0x00]);
+    const modulusLength = Buffer.alloc(2);
+    modulusLength.writeUInt16BE(modulus.length + 2, 0);
+    const exponentLength = Buffer.alloc(2);
+    exponentLength.writeUInt16BE(exponent.length + 2, 0);
+
+    const derSequence = Buffer.concat([
+      Buffer.from([0x02]), modulusLength, Buffer.from([0x00]), modulus,
+      Buffer.from([0x02]), exponentLength, Buffer.from([0x00]), exponent
+    ]);
+
+    const derFull = Buffer.concat([derHeader, derSequence]);
+    const pemBody = derFull.toString('base64').match(/.{1,64}/g)?.join('\n') || '';
+
+    auth0PublicKey = pemHeader + pemBody + pemFooter;
+    jwksCacheTime = now;
+
+    console.log("✅ Auth0 public key cached");
+    return auth0PublicKey;
+  } catch (error) {
+    console.error("❌ Failed to fetch Auth0 public key:", error);
+    throw error;
+  }
+}
+
 // Middleware to check if user is authenticated
 async function requireAuth(req: Request, res: Response, next: NextFunction) {
   console.log("🔐 Auth check:", {
@@ -77,22 +148,53 @@ async function requireAuth(req: Request, res: Response, next: NextFunction) {
     }
   }
 
-  // 2. Check for Supabase Token
+  // 2. Check for Auth0 JWT Token
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    try {
+      const publicKey = await getAuth0PublicKey();
+
+      const decoded = jwt.verify(token, publicKey, {
+        algorithms: ['RS256'],
+        issuer: `https://${process.env.VITE_AUTH0_DOMAIN}/`,
+        audience: process.env.VITE_AUTH0_CLIENT_ID,
+      }) as any;
+
+      console.log("✅ Auth0 token verified for user:", decoded.sub, decoded.email);
+
+      // Ensure user exists in local DB
+      const user = await storage.createSupabaseUser(
+        decoded.sub,
+        decoded.email || `${decoded.sub}@auth0.local`,
+        decoded.nickname || decoded.name || decoded.email?.split('@')[0] || 'auth0-user'
+      );
+
+      // Set session userId for this request context
+      req.session.userId = user.id;
+
+      return next();
+    } catch (error) {
+      console.error("❌ Auth0 token verification failed:", error);
+    }
+  }
+
+  // 3. Check for Supabase Token (fallback)
   try {
     const supabaseSession = await getSupabaseSession(req);
     if (supabaseSession) {
       console.log("✅ Supabase token verified for user:", supabaseSession.email);
-      
+
       // Ensure user exists in local DB
       const user = await storage.createSupabaseUser(
         supabaseSession.id,
         supabaseSession.email,
         supabaseSession.username
       );
-      
+
       // Set session userId for this request context
       req.session.userId = user.id;
-      
+
       return next();
     }
   } catch (error) {
@@ -480,6 +582,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username,
         password: hashedPassword,
         role: (role as "admin" | "manager") || "manager",
+        isLocked: "false",
+        failedLoginAttempts: "0",
+        mustChangePassword: "true",
       });
 
       // Mark new user to change password on first login

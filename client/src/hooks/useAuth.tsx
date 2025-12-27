@@ -1,6 +1,7 @@
-import { createContext, useContext, ReactNode } from "react";
+import { createContext, useContext, ReactNode, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth0 } from "@auth0/auth0-react";
+import { setAuthToken } from "@/lib/api";
 
 interface User {
   id: string;
@@ -22,8 +23,26 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { user: auth0User, isLoading, logout: auth0Logout } = useAuth0();
+  const { user: auth0User, isLoading, logout: auth0Logout, getAccessToken } = useAuth0();
   const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    const updateToken = async () => {
+      try {
+        const token = await getAccessToken();
+        setAuthToken(token);
+      } catch (error) {
+        console.error("Failed to get Auth0 token:", error);
+        setAuthToken(null);
+      }
+    };
+
+    if (!isLoading && auth0User) {
+      updateToken();
+    } else if (!auth0User) {
+      setAuthToken(null);
+    }
+  }, [auth0User, isLoading, getAccessToken]);
 
   const user = auth0User ? {
     id: auth0User.sub || "",
