@@ -5,6 +5,7 @@ import createMemoryStore from "memorystore";
 import PostgresStore from "connect-pg-simple";
 import { Pool } from "pg";
 import helmet from "helmet";
+import cors from "cors";
 import { storage, ensureStorageReady } from "./storage";
 import { runMigrations, initializeDatabase } from "./db";
 import { uploadFileToSupabase, getPublicUrl } from "./supabase-client";
@@ -293,6 +294,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     xssFilter: true,
     noSniff: true,
     referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  }));
+
+  // CORS: Enable cross-origin requests from Firebase frontend to Render backend
+  app.use(cors({
+    origin: [
+      'https://joeyb.o', // Firebase production URL
+      'http://localhost:3000', // Local development
+      'http://localhost:5173', // Vite dev server
+    ],
+    credentials: true, // Allow cookies and authentication headers
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
   }));
   
   // Serve uploaded files statically
