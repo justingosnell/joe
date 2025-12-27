@@ -1,9 +1,15 @@
 export function getApiBaseUrl(): string {
-  const viteApiUrl = import.meta.env.VITE_API_URL;
+  const viteApiUrl = (import.meta as any).env?.VITE_API_URL;
   if (viteApiUrl) {
     return viteApiUrl;
   }
-  
+
+  // In production, frontend is on Firebase but backend is on Render
+  if ((import.meta as any).env?.PROD) {
+    return 'https://joeyb.onrender.com';
+  }
+
+  // In development, both frontend and backend run locally
   return '';
 }
 
