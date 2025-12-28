@@ -1,0 +1,1 @@
+-- Description column already included in initial migration
