@@ -366,12 +366,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Check authentication status
   app.get("/api/auth/me", async (req: Request, res: Response) => {
     if (!req.session.userId) {
-      return res.status(401).json({ message: "Not authenticated" });
+      return res.json({ user: null });
     }
 
     const user = await storage.getUser(req.session.userId);
     if (!user) {
-      return res.status(401).json({ message: "User not found" });
+      return res.json({ user: null });
     }
 
     res.json({ 

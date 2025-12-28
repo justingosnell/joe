@@ -4,7 +4,7 @@
 lsof -i :3000 | grep -v COMMAND | awk '{print $2}' | xargs kill -9 2>/dev/null || true
 
 # Start the server with proper error handling
-cd /Users/justingosnell/Dropbox/joe-main
+# cd /Users/justingosnell/Dropbox/joe-main
 
 export NODE_ENV=production
 
