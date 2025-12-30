@@ -7,7 +7,7 @@ import { Pool } from "pg";
 import helmet from "helmet";
 import { storage, ensureStorageReady } from "./storage";
 import { runMigrations, initializeDatabase } from "./db";
-import { uploadFileToSupabase, getPublicUrl } from "./supabase-client";
+import { uploadFileToR2, listR2Files, isR2Configured } from "./r2-client";
 import { geocodeLocation, isValidUSCoordinates } from "./geocoding";
 import bcrypt from "bcrypt";
 import { insertLocationSchema } from "@shared/schema";
@@ -712,26 +712,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mimetype: req.file.mimetype,
       });
 
-      const fileHash = computeFileHash(req.file.buffer);
-      const storagePath = `media/${fileHash}-${Date.now()}-${req.file.originalname}`;
-      
-      console.log("🔑 Supabase config:", {
-        url: process.env.SUPABASE_URL ? "✓" : "✗",
-        key: process.env.SUPABASE_KEY ? "✓" : "✗",
-        bucket: process.env.SUPABASE_BUCKET || "NOT SET",
-      });
-
+      let publicUrl: string;
       try {
-        console.log("📤 Uploading to Supabase...");
-        await uploadFileToSupabase(
-          process.env.SUPABASE_BUCKET!,
-          storagePath,
+        console.log("📤 Uploading to Cloudflare R2...");
+        const result = await uploadFileToR2(
           req.file.buffer,
+          req.file.originalname,
           req.file.mimetype
         );
-        console.log("✅ Supabase upload successful");
+        publicUrl = result.publicUrl;
+        console.log("✅ R2 upload successful");
       } catch (uploadError) {
-        console.error("❌ Failed to upload to Supabase:", {
+        console.error("❌ Failed to upload to R2:", {
           error: uploadError,
           message: uploadError instanceof Error ? uploadError.message : "Unknown",
           stack: uploadError instanceof Error ? uploadError.stack : undefined,
@@ -741,8 +733,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: uploadError instanceof Error ? uploadError.message : "Unknown error",
         });
       }
-
-      const publicUrl = getPublicUrl(process.env.SUPABASE_BUCKET!, storagePath);
 
       console.log("💾 Creating media record in database...");
       const mediaItem = await storage.createMedia({
@@ -822,25 +812,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      const fileHash = computeFileHash(req.file.buffer);
-      const storagePath = `media/${fileHash}-${Date.now()}-${req.file.originalname}`;
-      
+      let publicUrl: string;
       try {
-        await uploadFileToSupabase(
-          process.env.SUPABASE_BUCKET!,
-          storagePath,
+        const result = await uploadFileToR2(
           req.file.buffer,
+          req.file.originalname,
           req.file.mimetype
         );
+        publicUrl = result.publicUrl;
       } catch (uploadError) {
-        console.error("Failed to upload to Supabase:", uploadError);
+        console.error("Failed to upload to R2:", uploadError);
         return res.status(500).json({
           message: "Failed to upload file to storage",
           error: uploadError instanceof Error ? uploadError.message : "Unknown error",
         });
       }
-
-      const publicUrl = getPublicUrl(process.env.SUPABASE_BUCKET!, storagePath);
 
       const mediaItem = await storage.createMedia({
         filename: req.file.originalname,
@@ -1022,26 +1008,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Recover media from Supabase storage (admin only)
-  app.post("/api/admin/recover-supabase-media", requireAuth, async (req: Request, res: Response) => {
+  // Recover media from R2 storage (admin only)
+  app.post("/api/admin/recover-r2-media", requireAuth, async (req: Request, res: Response) => {
     try {
-      const { supabase } = await import("./supabase-client");
-      const { getPublicUrl } = await import("./supabase-client");
-
-      const bucket = process.env.SUPABASE_BUCKET;
-      if (!bucket) {
-        return res.status(400).json({ message: "SUPABASE_BUCKET not configured" });
+      const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+      const bucket = process.env.CLOUDFLARE_R2_BUCKET;
+      
+      if (!accountId || !bucket) {
+        return res.status(400).json({ message: "R2 not configured" });
       }
 
-      // List all files in Supabase bucket
-      const { data: files, error } = await supabase.storage.from(bucket).list();
-
-      if (error) {
-        console.error("Error listing Supabase files:", error);
-        return res.status(500).json({ message: "Failed to list Supabase files" });
+      // List all files in R2 bucket
+      let files: string[] = [];
+      try {
+        files = await listR2Files();
+      } catch (error) {
+        console.error("Error listing R2 files:", error);
+        return res.status(500).json({ message: "Failed to list R2 files" });
       }
 
-      console.log(`📁 Found ${files.length} files in Supabase bucket`);
+      console.log(`📁 Found ${files.length} files in R2 bucket`);
 
       // Get all existing media records from database
       const existingMedia = await storage.getAllMedia();
@@ -1050,14 +1036,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`💾 Found ${existingMedia.length} media records in database`);
 
       // Filter files that aren't in the database
-      const newFiles = files.filter((file) => {
-        const fileUrl = getPublicUrl(bucket, file.name);
+      const newFiles = files.filter((key) => {
+        const fileUrl = `https://${bucket}.${accountId}.r2.cloudflarestorage.com/${encodeURI(key)}`;
         return !existingUrls.has(fileUrl);
       });
 
       if (newFiles.length === 0) {
         return res.json({
-          message: "All Supabase files are already in database",
+          message: "All R2 files are already in database",
           addedCount: 0,
           totalCount: existingMedia.length,
         });
@@ -1067,23 +1053,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Add new files to database
       let addedCount = 0;
-      for (const file of newFiles) {
+      for (const key of newFiles) {
         try {
-          const fileUrl = getPublicUrl(bucket, file.name);
-          const mimeType = getMimeType(file.name);
+          const fileUrl = `https://${bucket}.${accountId}.r2.cloudflarestorage.com/${encodeURI(key)}`;
+          const filename = key.split("/").pop() || key;
+          const mimeType = getMimeType(filename);
           await storage.createMedia({
-            filename: file.name,
-            originalName: file.name,
+            filename,
+            originalName: filename,
             url: fileUrl,
             mimeType,
-            size: String(file.metadata?.size || 0),
+            size: "0",
             alt: "",
             caption: "",
           });
           addedCount++;
-          console.log(`✅ Added: ${file.name}`);
+          console.log(`✅ Added: ${filename}`);
         } catch (err) {
-          console.error(`❌ Failed to add ${file.name}:`, err);
+          console.error(`❌ Failed to add ${key}:`, err);
         }
       }
 
