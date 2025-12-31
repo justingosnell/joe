@@ -22,6 +22,16 @@ export async function getStorageStats(): Promise<StorageStats> {
   }
 
   try {
+    if (!supabase) {
+      console.warn("⚠️ Supabase not configured, returning empty storage stats");
+      return {
+        usedBytes: 0,
+        limitBytes: SUPABASE_BUCKET_LIMIT_BYTES,
+        percentageUsed: 0,
+        isNearCapacity: false,
+      };
+    }
+
     const { data, error } = await supabase.storage
       .from(process.env.SUPABASE_BUCKET || "media")
       .list();

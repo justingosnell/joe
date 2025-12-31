@@ -34,7 +34,7 @@ export async function uploadFileToCloudinary(
   await initCloudinary();
   
   if (!cloudinary) {
-    throw new Error("Cloudinary not configured. Install cloudinary package and set environment variables.");
+    throw new Error("Cloudinary not configured. Install cloudinary package and set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.");
   }
 
   return new Promise((resolve, reject) => {

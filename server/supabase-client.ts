@@ -10,17 +10,7 @@ console.log("🔑 Supabase initialization:", {
   bucket: supabaseBucket || "MISSING",
 });
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error(
-    `Missing SUPABASE_URL (${supabaseUrl ? "✓" : "✗"}) or SUPABASE_KEY (${supabaseKey ? "✓" : "✗"}) environment variables`
-  );
-}
-
-if (!supabaseBucket) {
-  throw new Error("Missing SUPABASE_BUCKET environment variable");
-}
-
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 export async function uploadFileToSupabase(
   bucket: string,
@@ -28,6 +18,10 @@ export async function uploadFileToSupabase(
   fileBuffer: Buffer,
   contentType: string
 ): Promise<string> {
+  if (!supabase) {
+    throw new Error("Supabase is not configured");
+  }
+  
   const { data, error } = await supabase.storage
     .from(bucket)
     .upload(path, fileBuffer, {
@@ -43,6 +37,10 @@ export async function uploadFileToSupabase(
 }
 
 export function getPublicUrl(bucket: string, path: string): string {
+  if (!supabase) {
+    throw new Error("Supabase is not configured");
+  }
+  
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   console.log("🔗 Public URL generated:", {
     input: { bucket, path: path.substring(0, 30) },

@@ -7,7 +7,7 @@ import { Pool } from "pg";
 import helmet from "helmet";
 import { storage, ensureStorageReady } from "./storage";
 import { runMigrations, initializeDatabase } from "./db";
-import { uploadFileToR2, listR2Files, isR2Configured } from "./r2-client";
+import { uploadFileToSupabase, getPublicUrl } from "./supabase-client";
 import { geocodeLocation, isValidUSCoordinates } from "./geocoding";
 import bcrypt from "bcrypt";
 import { insertLocationSchema } from "@shared/schema";
@@ -274,104 +274,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Helper: If `INIT_ADMIN_TOKEN` is set, require callers to provide it in `X-INIT-ADMIN-TOKEN`
-  function requireInitTokenHeader(req: Request, res: Response) {
-    const expected = process.env.INIT_ADMIN_TOKEN;
-    if (!expected) return true; // not configured, allow
-    const provided = (req.headers["x-init-admin-token"] || req.headers["X-INIT-ADMIN-TOKEN"]) as string | undefined;
-    if (!provided || provided !== expected) {
-      res.status(403).json({ message: "Forbidden: missing or invalid init token" });
-      return false;
-    }
-    return true;
-  }
-
-  // Initialize admin user from environment variables (creates user if missing)
-  app.post("/api/auth/init-admin", async (req: Request, res: Response) => {
-    try {
-      if (!requireInitTokenHeader(req, res)) return;
-
-      const envUser = process.env.INIT_ADMIN_USERNAME;
-      const envPass = process.env.INIT_ADMIN_PASSWORD;
-
-      if (!envUser || !envPass) {
-        return res.status(400).json({ message: "INIT_ADMIN_USERNAME and INIT_ADMIN_PASSWORD must be set in environment" });
-      }
-
-      const username = sanitizeInput(envUser);
-
-      let existing = await storage.getUserByUsername(username);
-      if (existing) {
-        return res.json({ message: "Admin user already exists", user: { id: existing.id, username: existing.username } });
-      }
-
-      const hashed = await bcrypt.hash(envPass, 10);
-      const newUser = await storage.createUser({ username, password: hashed, role: "admin" });
-
-      // Do not force password change for seeded admin
-      await storage.setMustChangePassword(newUser.id, false).catch(() => {});
-
-      res.status(201).json({ message: "Admin user created", user: { id: newUser.id, username: newUser.username } });
-    } catch (error) {
-      console.error("Init admin error:", error);
-      res.status(500).json({ message: "Failed to initialize admin user" });
-    }
-  });
-
-  // Auto-login using credentials stored in environment (does not expose credentials to client)
-  app.post("/api/auth/auto-login", async (req: Request, res: Response) => {
-    try {
-      if (!requireInitTokenHeader(req, res)) return;
-
-      const envUser = process.env.INIT_ADMIN_USERNAME;
-      const envPass = process.env.INIT_ADMIN_PASSWORD;
-
-      if (!envUser || !envPass) {
-        return res.status(400).json({ message: "INIT_ADMIN_USERNAME and INIT_ADMIN_PASSWORD must be set in environment" });
-      }
-
-      const username = sanitizeInput(envUser);
-      let user = await storage.getUserByUsername(username);
-
-      // If user doesn't exist, create it
-      if (!user) {
-        const hashed = await bcrypt.hash(envPass, 10);
-        user = await storage.createUser({ username, password: hashed, role: "admin" });
-        // don't force password change for seeded admin
-        await storage.setMustChangePassword(user.id, false).catch(() => {});
-      }
-
-      // Verify password matches stored hash
-      const match = await bcrypt.compare(envPass, user.password);
-      if (!match) {
-        return res.status(401).json({ message: "Auto-login failed: environment password does not match stored credentials" });
-      }
-
-      // Set session
-      req.session.userId = user.id;
-      await new Promise<void>((resolve, reject) => {
-        req.session.save((err) => {
-          if (err) return reject(err);
-          resolve();
-        });
-      });
-
-      res.json({ message: "Auto-login successful", user: { id: user.id, username: user.username, role: user.role } });
-    } catch (error) {
-      console.error("Auto-login error:", error);
-      res.status(500).json({ message: "Auto-login failed" });
-    }
-  });
-
   // Check authentication status
   app.get("/api/auth/me", async (req: Request, res: Response) => {
     if (!req.session.userId) {
-      return res.json({ user: null });
+      return res.status(401).json({ message: "Not authenticated" });
     }
 
     const user = await storage.getUser(req.session.userId);
     if (!user) {
-      return res.json({ user: null });
+      return res.status(401).json({ message: "User not found" });
     }
 
     res.json({ 
@@ -712,18 +623,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mimetype: req.file.mimetype,
       });
 
-      let publicUrl: string;
+      const fileHash = computeFileHash(req.file.buffer);
+      const storagePath = `media/${fileHash}-${Date.now()}-${req.file.originalname}`;
+      
+      console.log("🔑 Supabase config:", {
+        url: process.env.SUPABASE_URL ? "✓" : "✗",
+        key: process.env.SUPABASE_KEY ? "✓" : "✗",
+        bucket: process.env.SUPABASE_BUCKET || "NOT SET",
+      });
+
       try {
-        console.log("📤 Uploading to Cloudflare R2...");
-        const result = await uploadFileToR2(
+        console.log("📤 Uploading to Supabase...");
+        await uploadFileToSupabase(
+          process.env.SUPABASE_BUCKET!,
+          storagePath,
           req.file.buffer,
-          req.file.originalname,
           req.file.mimetype
         );
-        publicUrl = result.publicUrl;
-        console.log("✅ R2 upload successful");
+        console.log("✅ Supabase upload successful");
       } catch (uploadError) {
-        console.error("❌ Failed to upload to R2:", {
+        console.error("❌ Failed to upload to Supabase:", {
           error: uploadError,
           message: uploadError instanceof Error ? uploadError.message : "Unknown",
           stack: uploadError instanceof Error ? uploadError.stack : undefined,
@@ -733,6 +652,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: uploadError instanceof Error ? uploadError.message : "Unknown error",
         });
       }
+
+      const publicUrl = getPublicUrl(process.env.SUPABASE_BUCKET!, storagePath);
 
       console.log("💾 Creating media record in database...");
       const mediaItem = await storage.createMedia({
@@ -812,21 +733,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
 
-      let publicUrl: string;
+      const fileHash = computeFileHash(req.file.buffer);
+      const storagePath = `media/${fileHash}-${Date.now()}-${req.file.originalname}`;
+      
       try {
-        const result = await uploadFileToR2(
+        await uploadFileToSupabase(
+          process.env.SUPABASE_BUCKET!,
+          storagePath,
           req.file.buffer,
-          req.file.originalname,
           req.file.mimetype
         );
-        publicUrl = result.publicUrl;
       } catch (uploadError) {
-        console.error("Failed to upload to R2:", uploadError);
+        console.error("Failed to upload to Supabase:", uploadError);
         return res.status(500).json({
           message: "Failed to upload file to storage",
           error: uploadError instanceof Error ? uploadError.message : "Unknown error",
         });
       }
+
+      const publicUrl = getPublicUrl(process.env.SUPABASE_BUCKET!, storagePath);
 
       const mediaItem = await storage.createMedia({
         filename: req.file.originalname,
@@ -1008,26 +933,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Recover media from R2 storage (admin only)
-  app.post("/api/admin/recover-r2-media", requireAuth, async (req: Request, res: Response) => {
+  // Recover media from Supabase storage (admin only)
+  app.post("/api/admin/recover-supabase-media", requireAuth, async (req: Request, res: Response) => {
     try {
-      const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-      const bucket = process.env.CLOUDFLARE_R2_BUCKET;
-      
-      if (!accountId || !bucket) {
-        return res.status(400).json({ message: "R2 not configured" });
+      const { supabase } = await import("./supabase-client");
+      const { getPublicUrl } = await import("./supabase-client");
+
+      const bucket = process.env.SUPABASE_BUCKET;
+      if (!bucket) {
+        return res.status(400).json({ message: "SUPABASE_BUCKET not configured" });
       }
 
-      // List all files in R2 bucket
-      let files: string[] = [];
-      try {
-        files = await listR2Files();
-      } catch (error) {
-        console.error("Error listing R2 files:", error);
-        return res.status(500).json({ message: "Failed to list R2 files" });
+      // List all files in Supabase bucket
+      const { data: files, error } = await supabase.storage.from(bucket).list();
+
+      if (error) {
+        console.error("Error listing Supabase files:", error);
+        return res.status(500).json({ message: "Failed to list Supabase files" });
       }
 
-      console.log(`📁 Found ${files.length} files in R2 bucket`);
+      console.log(`📁 Found ${files.length} files in Supabase bucket`);
 
       // Get all existing media records from database
       const existingMedia = await storage.getAllMedia();
@@ -1036,14 +961,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`💾 Found ${existingMedia.length} media records in database`);
 
       // Filter files that aren't in the database
-      const newFiles = files.filter((key) => {
-        const fileUrl = `https://${bucket}.${accountId}.r2.cloudflarestorage.com/${encodeURI(key)}`;
+      const newFiles = files.filter((file) => {
+        const fileUrl = getPublicUrl(bucket, file.name);
         return !existingUrls.has(fileUrl);
       });
 
       if (newFiles.length === 0) {
         return res.json({
-          message: "All R2 files are already in database",
+          message: "All Supabase files are already in database",
           addedCount: 0,
           totalCount: existingMedia.length,
         });
@@ -1053,24 +978,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Add new files to database
       let addedCount = 0;
-      for (const key of newFiles) {
+      for (const file of newFiles) {
         try {
-          const fileUrl = `https://${bucket}.${accountId}.r2.cloudflarestorage.com/${encodeURI(key)}`;
-          const filename = key.split("/").pop() || key;
-          const mimeType = getMimeType(filename);
+          const fileUrl = getPublicUrl(bucket, file.name);
+          const mimeType = getMimeType(file.name);
           await storage.createMedia({
-            filename,
-            originalName: filename,
+            filename: file.name,
+            originalName: file.name,
             url: fileUrl,
             mimeType,
-            size: "0",
+            size: String(file.metadata?.size || 0),
             alt: "",
             caption: "",
           });
           addedCount++;
-          console.log(`✅ Added: ${filename}`);
+          console.log(`✅ Added: ${file.name}`);
         } catch (err) {
-          console.error(`❌ Failed to add ${key}:`, err);
+          console.error(`❌ Failed to add ${file.name}:`, err);
         }
       }
 
