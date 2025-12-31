@@ -41,6 +41,7 @@ export async function uploadFileToR2(
       Key: key,
       Body: fileBuffer,
       ContentType: contentType,
+      CacheControl: "public, max-age=31536000, immutable",
     });
 
     await s3Client.send(command);
