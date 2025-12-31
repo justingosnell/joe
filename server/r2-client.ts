@@ -31,34 +31,45 @@ const s3Client = new S3Client({
 export async function uploadFileToR2(
   fileBuffer: Buffer,
   filename: string,
-  contentType: string
+  contentType: string,
+  retries = 3
 ): Promise<{ publicUrl: string; key: string }> {
   const key = `media/${Date.now()}-${filename}`;
 
-  try {
-    const command = new PutObjectCommand({
-      Bucket: bucketName!,
-      Key: key,
-      Body: fileBuffer,
-      ContentType: contentType,
-      CacheControl: "public, max-age=31536000, immutable",
-    });
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const command = new PutObjectCommand({
+        Bucket: bucketName!,
+        Key: key,
+        Body: fileBuffer,
+        ContentType: contentType,
+        CacheControl: "public, max-age=31536000, immutable",
+      });
 
-    await s3Client.send(command);
+      await s3Client.send(command);
 
-    const publicUrl = `https://${bucketName}.${accountId}.r2.cloudflarestorage.com/${encodeURI(key)}`;
+      const publicUrl = `https://${bucketName}.${accountId}.r2.cloudflarestorage.com/${encodeURI(key)}`;
 
-    console.log("✅ R2 upload successful:", {
-      filename,
-      key: key.substring(0, 50),
-      url: publicUrl.substring(0, 60),
-    });
+      console.log("✅ R2 upload successful:", {
+        filename,
+        key: key.substring(0, 50),
+        url: publicUrl.substring(0, 60),
+      });
 
-    return { publicUrl, key };
-  } catch (error) {
-    console.error("❌ R2 upload failed:", error);
-    throw new Error(`R2 upload failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      return { publicUrl, key };
+    } catch (error) {
+      if (attempt < retries) {
+        const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+        console.warn(`⚠️  Upload attempt ${attempt}/${retries} failed, retrying in ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      } else {
+        console.error("❌ R2 upload failed after retries:", error);
+        throw new Error(`R2 upload failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      }
+    }
   }
+
+  throw new Error("R2 upload failed: unexpected end of retries");
 }
 
 export async function listR2Files(): Promise<string[]> {
