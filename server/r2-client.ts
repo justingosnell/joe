@@ -5,12 +5,14 @@ const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
 const accessKeyId = process.env.CLOUDFLARE_ACCESS_KEY_ID;
 const secretAccessKey = process.env.CLOUDFLARE_SECRET_ACCESS_KEY;
 const bucketName = process.env.CLOUDFLARE_R2_BUCKET;
+const publicDomain = process.env.CLOUDFLARE_R2_PUBLIC_DOMAIN;
 
 console.log("🔑 Cloudflare R2 initialization:", {
   accountId: accountId ? `${accountId.substring(0, 8)}...` : "MISSING",
   accessKeyId: accessKeyId ? "✓ SET" : "MISSING",
   secretAccessKey: secretAccessKey ? "✓ SET" : "MISSING",
   bucket: bucketName || "MISSING",
+  publicDomain: publicDomain || "MISSING (will use default domain)",
 });
 
 if (!accountId || !accessKeyId || !secretAccessKey || !bucketName) {
@@ -48,7 +50,9 @@ export async function uploadFileToR2(
 
       await s3Client.send(command);
 
-      const publicUrl = `https://${bucketName}.${accountId}.r2.cloudflarestorage.com/${encodeURI(key)}`;
+      const publicUrl = publicDomain 
+        ? `https://${publicDomain}/${encodeURI(key)}`
+        : `https://${bucketName}.${accountId}.r2.cloudflarestorage.com/${encodeURI(key)}`;
 
       console.log("✅ R2 upload successful:", {
         filename,
