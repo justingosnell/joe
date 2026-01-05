@@ -248,7 +248,7 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-card border-t border-border text-foreground py-8 mt-12">
+      <footer className="shape-divider bg-card border-t border-border text-foreground py-8 mt-12">
         <div className="container mx-auto px-4 text-center">
           <p className="text-lg mb-2">Brought to you by: Joe Bosse</p>
           <p className="text-sm text-muted-foreground">
