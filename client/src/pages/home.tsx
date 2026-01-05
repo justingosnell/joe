@@ -129,11 +129,11 @@ export default function Home() {
           <h2 className="text-3xl font-bold mb-6 text-foreground" style={{ fontFamily: '"Luckiest Guy", cursive' }}>Roadside Collections</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {categoryCollections.map((collection) => {
-              const backgroundImage = (collection as any).backgroundImageUrl;
+              const backgroundImage = (collection as any).backgroundImageUrl || null;
               const overlayColor = (collection as any).overlayColor || "#000000";
               const overlayOpacity = parseFloat((collection as any).overlayOpacity || "0.5");
               const textColor = (collection as any).textColor || "#ffffff";
-              const customIcon = (collection as any).customIconUrl;
+              const customIcon = (collection as any).customIconUrl || null;
 
               return (
                 <Card
@@ -144,7 +144,7 @@ export default function Home() {
                     <div
                       className="absolute inset-0 bg-cover bg-center"
                       style={{
-                        backgroundImage: `url(${backgroundImage})`,
+                        backgroundImage: `url('${backgroundImage}')`,
                       }}
                     />
                   )}

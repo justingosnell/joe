@@ -80,22 +80,22 @@ export function CategorySettingsDialog({
   const form = useForm<CategorySettings>({
     resolver: zodResolver(categorySettingsSchema),
     defaultValues: {
-      backgroundImageUrl: category.backgroundImageUrl || "",
+      backgroundImageUrl: category.backgroundImageUrl ?? "",
       overlayColor: category.overlayColor || "#000000",
       overlayOpacity: category.overlayOpacity || "0.5",
       textColor: category.textColor || "#ffffff",
-      customIconUrl: category.customIconUrl || "",
+      customIconUrl: category.customIconUrl ?? "",
     },
   });
 
   useEffect(() => {
     if (open) {
       form.reset({
-        backgroundImageUrl: category.backgroundImageUrl || "",
+        backgroundImageUrl: category.backgroundImageUrl ?? "",
         overlayColor: category.overlayColor || "#000000",
         overlayOpacity: category.overlayOpacity || "0.5",
         textColor: category.textColor || "#ffffff",
-        customIconUrl: category.customIconUrl || "",
+        customIconUrl: category.customIconUrl ?? "",
       });
     }
   }, [open, category]);
@@ -175,7 +175,12 @@ export function CategorySettingsDialog({
   };
 
   const handleSubmit = (data: CategorySettings) => {
-    onSave(data);
+    const cleanedData = {
+      ...data,
+      backgroundImageUrl: data.backgroundImageUrl || undefined,
+      customIconUrl: data.customIconUrl || undefined,
+    };
+    onSave(cleanedData);
     onOpenChange(false);
   };
 
@@ -347,7 +352,7 @@ export function CategorySettingsDialog({
                 className="relative w-full h-40 rounded-lg overflow-hidden border"
                 style={{
                   backgroundImage: previewBackgroundImage
-                    ? `url(${previewBackgroundImage})`
+                    ? `url('${previewBackgroundImage}')`
                     : undefined,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
