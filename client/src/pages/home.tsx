@@ -126,7 +126,7 @@ export default function Home() {
 
         {/* Category Collections */}
         <section className="mb-12">
-          <h2 className="text-3xl font-bold mb-6 text-foreground">Roadside Collections</h2>
+          <h2 className="text-3xl font-bold mb-6 text-foreground" style={{ fontFamily: '"Luckiest Guy", cursive' }}>Roadside Collections</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {categoryCollections.map((collection) => {
               const backgroundImage = (collection as any).backgroundImageUrl;
