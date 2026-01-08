@@ -528,9 +528,10 @@ export function LocationDialog({
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.preventDefault();
                             setPreviewUrl("");
-                            form.setValue("photoUrl", "");
+                            form.setValue("photoUrl", "", { shouldDirty: true });
                           }}
                           disabled={uploading || isLoading}
                         >
@@ -544,11 +545,12 @@ export function LocationDialog({
                       <FormLabel className="text-xs text-muted-foreground">Or enter URL manually</FormLabel>
                       <FormControl>
                         <Input
-                          {...field}
+                          value={field.value ?? ""}
                           onChange={(e) => {
                             field.onChange(e);
                             setPreviewUrl(e.target.value);
                           }}
+                          onBlur={field.onBlur}
                           disabled={uploading || isLoading}
                         />
                       </FormControl>

@@ -157,23 +157,8 @@ export default function Home() {
                   />
                   <CardContent className="p-4 relative z-10 h-full flex flex-col justify-between">
                     <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 text-5xl group-hover:scale-110 transition-transform flex items-center justify-center w-16 h-16">
-                        {customIcon ? (
-                          <img
-                            src={customIcon}
-                            alt={collection.title}
-                            className="w-16 h-16 object-contain"
-                          />
-                        ) : collection.icon.startsWith("http") ||
-                          collection.icon.startsWith("/") ? (
-                          <img
-                            src={collection.icon}
-                            alt={collection.title}
-                            className="w-16 h-16 object-contain"
-                          />
-                        ) : (
-                          collection.icon
-                        )}
+                      <div className="flex-shrink-0 text-7xl group-hover:scale-110 transition-transform flex items-center justify-center w-16 h-16">
+                        <MapPin style={{ color: textColor }} />
                       </div>
                       <div className="flex-1 text-center">
                         <CardTitle

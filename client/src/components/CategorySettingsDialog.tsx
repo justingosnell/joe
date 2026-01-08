@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
@@ -63,6 +63,8 @@ export function CategorySettingsDialog({
   const [iconMediaTab, setIconMediaTab] = useState<"upload" | "library">("upload");
   const [bgSelectorOpen, setBgSelectorOpen] = useState(false);
   const [iconSelectorOpen, setIconSelectorOpen] = useState(false);
+  const [bgSearchQuery, setBgSearchQuery] = useState("");
+  const [iconSearchQuery, setIconSearchQuery] = useState("");
   const fileInputRefBg = useRef<HTMLInputElement>(null);
   const fileInputRefIcon = useRef<HTMLInputElement>(null);
 
@@ -189,6 +191,22 @@ export function CategorySettingsDialog({
   const previewOverlayColor = form.watch("overlayColor");
   const previewOverlayOpacity = parseFloat(form.watch("overlayOpacity"));
   const previewTextColor = form.watch("textColor");
+
+  const filteredBgMedia = useMemo(() => {
+    if (!bgSearchQuery.trim()) return allMedia;
+    const query = bgSearchQuery.toLowerCase();
+    return allMedia.filter((media) =>
+      media.originalName.toLowerCase().includes(query)
+    );
+  }, [allMedia, bgSearchQuery]);
+
+  const filteredIconMedia = useMemo(() => {
+    if (!iconSearchQuery.trim()) return allMedia;
+    const query = iconSearchQuery.toLowerCase();
+    return allMedia.filter((media) =>
+      media.originalName.toLowerCase().includes(query)
+    );
+  }, [allMedia, iconSearchQuery]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -412,7 +430,10 @@ export function CategorySettingsDialog({
         </Form>
 
         {/* Background Image Selection Dialog */}
-        <Dialog open={bgSelectorOpen} onOpenChange={setBgSelectorOpen}>
+        <Dialog open={bgSelectorOpen} onOpenChange={(open) => {
+          setBgSelectorOpen(open);
+          if (!open) setBgSearchQuery("");
+        }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Select Background Image</DialogTitle>
@@ -443,35 +464,49 @@ export function CategorySettingsDialog({
                 </label>
               </TabsContent>
               
-              <TabsContent value="library" className="space-y-2 max-h-[60vh] overflow-y-auto">
-                {allMedia.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">No media in library</p>
-                ) : (
-                  <div className="grid grid-cols-4 gap-3">
-                    {allMedia.map((media) => (
-                      <button
-                        key={media.id}
-                        type="button"
-                        onClick={() => {
-                          form.setValue("backgroundImageUrl", media.url);
-                          setBgSelectorOpen(false);
-                        }}
-                        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:opacity-80 ${
-                          previewBackgroundImage === media.url ? "border-primary border-4" : "border-gray-200"
-                        }`}
-                      >
-                        <img src={media.url} alt={media.originalName} className="w-full h-full object-cover" />
-                      </button>
-                    ))}
-                  </div>
-                )}
+              <TabsContent value="library" className="space-y-4">
+                <Input
+                  placeholder="Search media by name..."
+                  value={bgSearchQuery}
+                  onChange={(e) => setBgSearchQuery(e.target.value)}
+                  className="w-full"
+                />
+                <div className="max-h-[60vh] overflow-y-auto">
+                  {allMedia.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">No media in library</p>
+                  ) : filteredBgMedia.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">No media matches your search</p>
+                  ) : (
+                    <div className="grid grid-cols-4 gap-3">
+                      {filteredBgMedia.map((media) => (
+                        <button
+                          key={media.id}
+                          type="button"
+                          onClick={() => {
+                            form.setValue("backgroundImageUrl", media.url);
+                            setBgSelectorOpen(false);
+                          }}
+                          className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:opacity-80 ${
+                            previewBackgroundImage === media.url ? "border-primary border-4" : "border-gray-200"
+                          }`}
+                          title={media.originalName}
+                        >
+                          <img src={media.url} alt={media.originalName} className="w-full h-full object-cover" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </TabsContent>
             </Tabs>
           </DialogContent>
         </Dialog>
 
         {/* Custom Icon Selection Dialog */}
-        <Dialog open={iconSelectorOpen} onOpenChange={setIconSelectorOpen}>
+        <Dialog open={iconSelectorOpen} onOpenChange={(open) => {
+          setIconSelectorOpen(open);
+          if (!open) setIconSearchQuery("");
+        }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Select Custom Icon</DialogTitle>
@@ -502,28 +537,39 @@ export function CategorySettingsDialog({
                 </label>
               </TabsContent>
               
-              <TabsContent value="library" className="space-y-2 max-h-[60vh] overflow-y-auto">
-                {allMedia.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">No media in library</p>
-                ) : (
-                  <div className="grid grid-cols-4 gap-3">
-                    {allMedia.map((media) => (
-                      <button
-                        key={media.id}
-                        type="button"
-                        onClick={() => {
-                          form.setValue("customIconUrl", media.url);
-                          setIconSelectorOpen(false);
-                        }}
-                        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:opacity-80 bg-gray-100 ${
-                          previewCustomIcon === media.url ? "border-primary border-4" : "border-gray-200"
-                        }`}
-                      >
-                        <img src={media.url} alt={media.originalName} className="w-full h-full object-contain" />
-                      </button>
-                    ))}
-                  </div>
-                )}
+              <TabsContent value="library" className="space-y-4">
+                <Input
+                  placeholder="Search media by name..."
+                  value={iconSearchQuery}
+                  onChange={(e) => setIconSearchQuery(e.target.value)}
+                  className="w-full"
+                />
+                <div className="max-h-[60vh] overflow-y-auto">
+                  {allMedia.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">No media in library</p>
+                  ) : filteredIconMedia.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">No media matches your search</p>
+                  ) : (
+                    <div className="grid grid-cols-4 gap-3">
+                      {filteredIconMedia.map((media) => (
+                        <button
+                          key={media.id}
+                          type="button"
+                          onClick={() => {
+                            form.setValue("customIconUrl", media.url);
+                            setIconSelectorOpen(false);
+                          }}
+                          className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all hover:opacity-80 bg-gray-100 ${
+                            previewCustomIcon === media.url ? "border-primary border-4" : "border-gray-200"
+                          }`}
+                          title={media.originalName}
+                        >
+                          <img src={media.url} alt={media.originalName} className="w-full h-full object-contain" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </TabsContent>
             </Tabs>
           </DialogContent>

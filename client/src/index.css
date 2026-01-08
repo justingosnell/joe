@@ -405,7 +405,7 @@
   position: absolute;
   right: 0;
   left: 0;
-  top: 100%;
+  bottom: 100%;
   z-index: 10;
   display: block;
   height: 50px;

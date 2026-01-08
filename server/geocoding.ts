@@ -1,14 +1,11 @@
 /**
- * Geocoding service using OpenStreetMap Nominatim
- * Converts city/state to latitude/longitude coordinates
+ * Geocoding service using Geoapify
+ * Converts city/state to latitude/longitude coordinates with precise accuracy
  */
 
-const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search";
+const GEOAPIFY_URL = "https://api.geoapify.com/v1/geocode/search";
+const GEOAPIFY_API_KEY = process.env.GEOAPIFY_API_KEY || process.env.VITE_GEOAPIFY_API_KEY;
 const CACHE = new Map<string, { latitude: number; longitude: number }>();
-
-// Add rate limiting to respect Nominatim's 1 request/second limit
-let lastRequestTime = 0;
-const MIN_REQUEST_INTERVAL = 1100; // 1.1 seconds to be safe
 
 async function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -16,28 +13,20 @@ async function delay(ms: number): Promise<void> {
 
 async function tryGeocodeQuery(query: string): Promise<{ latitude: number; longitude: number } | null> {
   try {
-    // Rate limiting - wait if needed
-    const timeSinceLastRequest = Date.now() - lastRequestTime;
-    if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
-      await delay(MIN_REQUEST_INTERVAL - timeSinceLastRequest);
+    if (!GEOAPIFY_API_KEY) {
+      console.error("❌ Geoapify API key not configured");
+      return null;
     }
 
-    lastRequestTime = Date.now();
-
-    const url = new URL(NOMINATIM_URL);
-    url.searchParams.append("q", query);
-    url.searchParams.append("format", "json");
+    const url = new URL(GEOAPIFY_URL);
+    url.searchParams.append("text", query);
+    url.searchParams.append("apiKey", GEOAPIFY_API_KEY);
     url.searchParams.append("limit", "1");
-    url.searchParams.append("countrycodes", "us,ca"); // Restrict to US and Canada
+    url.searchParams.append("format", "json");
 
     console.log(`🌍 Trying geocoding query: ${query}`);
-    console.log(`   URL: ${url.toString()}`);
 
-    const response = await fetch(url.toString(), {
-      headers: {
-        "User-Agent": "RoadsideMap/1.0",
-      },
-    });
+    const response = await fetch(url.toString());
 
     console.log(`   Response status: ${response.status}`);
 
@@ -46,14 +35,14 @@ async function tryGeocodeQuery(query: string): Promise<{ latitude: number; longi
       return null;
     }
 
-    const results = await response.json();
-    console.log(`   Results count: ${Array.isArray(results) ? results.length : 'not array'}`);
+    const data = await response.json();
+    console.log(`   Results count: ${data.results?.length || 0}`);
 
-    if (Array.isArray(results) && results.length > 0) {
-      const result = results[0];
+    if (data.results && data.results.length > 0) {
+      const result = data.results[0];
       const coords = {
-        latitude: parseFloat(result.lat),
-        longitude: parseFloat(result.lon),
+        latitude: result.lat,
+        longitude: result.lon,
       };
       
       console.log(`   Raw coords: (${coords.latitude}, ${coords.longitude})`);
@@ -75,7 +64,7 @@ async function tryGeocodeQuery(query: string): Promise<{ latitude: number; longi
         console.warn(`⚠️ Invalid coordinates for ${query}: (${coords.latitude}, ${coords.longitude}) - not in valid US bounds`);
       }
     } else {
-      console.log(`   No results in array for query: ${query}`);
+      console.log(`   No results found for query: ${query}`);
     }
 
     return null;
