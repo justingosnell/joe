@@ -5,6 +5,13 @@
 
 const GEOAPIFY_URL = "https://api.geoapify.com/v1/geocode/search";
 const GEOAPIFY_API_KEY = process.env.GEOAPIFY_API_KEY || process.env.VITE_GEOAPIFY_API_KEY;
+
+// Debug logging for environment variables
+console.log("🔍 Environment check:");
+console.log("   GEOAPIFY_API_KEY:", GEOAPIFY_API_KEY ? "✓ Set" : "✗ Not set");
+console.log("   GEOAPIFY_API_KEY length:", GEOAPIFY_API_KEY?.length || 0);
+console.log("   process.env keys containing 'GEO':", Object.keys(process.env).filter(key => key.includes('GEO')));
+
 const CACHE = new Map<string, { latitude: number; longitude: number }>();
 
 async function delay(ms: number): Promise<void> {
