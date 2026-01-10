@@ -68,6 +68,39 @@ export default function Admin() {
     },
   });
 
+  // Fetch media for total file size calculation
+  const { data: allMedia = [] } = useQuery<any[]>({
+    queryKey: ["media"],
+    queryFn: async () => {
+      const response = await fetch(getApiUrl("/api/media"), {
+        credentials: "include",
+      });
+      if (!response.ok) return [];
+      return response.json();
+    },
+  });
+
+  // Calculate total media file size
+  const totalMediaSize = useMemo(() => {
+    const bytes = allMedia.reduce((sum, media) => {
+      const size = parseInt(media.size, 10) || 0;
+      return sum + size;
+    }, 0);
+
+    if (bytes === 0) return "0 B";
+    
+    const units = ["B", "KB", "MB", "GB"];
+    let size = bytes;
+    let unitIndex = 0;
+    
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+    
+    return `${size.toFixed(2)} ${units[unitIndex]}`;
+  }, [allMedia]);
+
   // Filter locations based on search query
   const locations = useMemo(() => {
     if (!searchQuery.trim()) return allLocations;
@@ -98,17 +131,28 @@ export default function Admin() {
   // Create location mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertLocation) => {
-      const response = await fetch(getApiUrl("/api/locations"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to create location");
+      console.log("📤 Creating location:", data);
+      try {
+        const response = await fetch(getApiUrl("/api/locations"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+          credentials: "include",
+        });
+        console.log("📥 Response status:", response.status);
+        
+        if (!response.ok) {
+          const error = await response.json();
+          console.error("❌ API error:", error);
+          throw new Error(error.message || "Failed to create location");
+        }
+        const result = await response.json();
+        console.log("✅ Location created:", result);
+        return result;
+      } catch (error) {
+        console.error("❌ Create location error:", error);
+        throw error;
       }
-      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["locations"] });
@@ -116,6 +160,7 @@ export default function Admin() {
       setIsDialogOpen(false);
     },
     onError: (error: Error) => {
+      console.error("❌ Mutation error:", error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
@@ -401,7 +446,7 @@ export default function Admin() {
               <div className="mb-4">
                 <h2 className="luckiest-guy-regular text-2xl font-bold">Media Library</h2>
                 <p className="text-sm text-muted-foreground">
-                  Manage your uploaded images and media files
+                  Total storage: {totalMediaSize} ({allMedia.length} file{allMedia.length !== 1 ? 's' : ''})
                 </p>
               </div>
             </div>

@@ -24,6 +24,10 @@ services:
         sync: true
       - key: INIT_ADMIN_PASSWORD
         sync: true
+      - key: GEOAPIFY_API_KEY
+        sync: true
+      - key: VITE_GEOAPIFY_API_KEY
+        sync: true
     nixpacks:
       aptPackages:
         - build-essential

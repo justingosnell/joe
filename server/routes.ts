@@ -187,6 +187,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
+  // Geocoding status for debugging environment variables
+  app.get("/api/admin/geocoding-status", requireAuth, async (req: Request, res: Response) => {
+    try {
+      const currentUser = await storage.getUser(req.session.userId!);
+      if (!currentUser || currentUser.role !== "admin") {
+        return res.status(403).json({ message: "Forbidden: Admin access required" });
+      }
+
+      const geoKeys = Object.keys(process.env).filter(k => k.toLowerCase().includes('geo'));
+      const apiKey = process.env.GEOAPIFY_API_KEY || process.env.VITE_GEOAPIFY_API_KEY || process.env.GEOAPIFY_KEY || process.env.GEO_API_KEY;
+
+      res.json({
+        hasKey: !!apiKey,
+        keyLength: apiKey?.length || 0,
+        availableGeoKeys: geoKeys,
+        nodeEnv: process.env.NODE_ENV,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get geocoding status" });
+    }
+  });
+
   // ============ Authentication Routes ============
   
   // Login with security features (account lockout, failed attempt tracking, XSS protection)

@@ -3,6 +3,21 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
+// Log environment status at startup
+console.log("🚀 Server starting (Runtime check)...");
+const hasGeoKey = !!(
+  process.env.GEOAPIFY_API_KEY || 
+  process.env.VITE_GEOAPIFY_API_KEY || 
+  process.env.GEOAPIFY_KEY || 
+  process.env.GEO_API_KEY ||
+  process.env.GEOAPIFY
+);
+console.log("   Geocoding API Key presence:", hasGeoKey ? "✅ Set" : "❌ NOT SET");
+if (!hasGeoKey) {
+  console.log("   Available environment variables (containing 'GEO'):", 
+    Object.keys(process.env).filter(k => k.toLowerCase().includes('geo')));
+}
+
 // Handle uncaught exceptions
 process.on("uncaughtException", (error) => {
   log(`❌ Uncaught Exception: ${error instanceof Error ? error.message : String(error)}`);

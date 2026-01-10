@@ -4,13 +4,30 @@
  */
 
 const GEOAPIFY_URL = "https://api.geoapify.com/v1/geocode/search";
-const GEOAPIFY_API_KEY = process.env.GEOAPIFY_API_KEY || process.env.VITE_GEOAPIFY_API_KEY;
 
-// Debug logging for environment variables
-console.log("🔍 Environment check:");
-console.log("   GEOAPIFY_API_KEY:", GEOAPIFY_API_KEY ? "✓ Set" : "✗ Not set");
-console.log("   GEOAPIFY_API_KEY length:", GEOAPIFY_API_KEY?.length || 0);
-console.log("   process.env keys containing 'GEO':", Object.keys(process.env).filter(key => key.includes('GEO')));
+function getApiKey(): string | undefined {
+  const possibleKeys = [
+    'GEOAPIFY_API_KEY',
+    'VITE_GEOAPIFY_API_KEY',
+    'GEOAPIFY_KEY',
+    'GEO_API_KEY',
+    'GEOAPIFY'
+  ];
+
+  for (const keyName of possibleKeys) {
+    const value = process.env[keyName];
+    if (value && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+
+  console.error("❌ Geocoding Environment check: NO API KEY FOUND in any expected environment variable");
+  console.log("   Checked keys:", possibleKeys.join(", "));
+  console.log("   Available env keys containing 'GEO' (case-insensitive):", 
+    Object.keys(process.env).filter(k => k.toLowerCase().includes('geo')));
+  
+  return undefined;
+}
 
 const CACHE = new Map<string, { latitude: number; longitude: number }>();
 
@@ -20,14 +37,14 @@ async function delay(ms: number): Promise<void> {
 
 async function tryGeocodeQuery(query: string): Promise<{ latitude: number; longitude: number } | null> {
   try {
-    if (!GEOAPIFY_API_KEY) {
-      console.error("❌ Geoapify API key not configured");
+    const apiKey = getApiKey();
+    if (!apiKey) {
       return null;
     }
 
     const url = new URL(GEOAPIFY_URL);
     url.searchParams.append("text", query);
-    url.searchParams.append("apiKey", GEOAPIFY_API_KEY);
+    url.searchParams.append("apiKey", apiKey);
     url.searchParams.append("limit", "1");
     url.searchParams.append("format", "json");
 
