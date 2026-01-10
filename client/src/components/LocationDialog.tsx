@@ -436,7 +436,7 @@ export function LocationDialog({
                   <FormItem>
                     <FormLabel>City <span className="text-red-500">*</span></FormLabel>
                     <FormControl>
-                      <Input {...field} value={field.value ?? ""} placeholder="Required for geocoding" />
+                      <Input {...field} placeholder="Required for geocoding" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

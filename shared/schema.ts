@@ -16,11 +16,7 @@ export const users = pgTable("users", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-  role: true,
-}).extend({
+export const insertUserSchema = createInsertSchema(users).extend({
   role: z.enum(["admin", "manager"]).optional().default("manager"),
 });
 
@@ -36,24 +32,26 @@ export const locations = pgTable("locations", {
   state: text("state").notNull(),
   city: text("city").default(""),
   zipCode: text("zip_code").default(""),
-  photoUrl: text("photo_url").notNull(),
-  photoId: text("photo_id").notNull(),
+  photoUrl: text("photo_url").default(""),
+  photoId: text("photo_id").default(""),
   taggedDate: text("tagged_date").notNull(),
   description: text("description").default(""),
   customFields: text("custom_fields").default("{}"),
 });
 
-export const insertLocationSchema = createInsertSchema(locations).omit({
-  id: true,
-}).extend({
-  city: z.string().min(1, "City is required"),
-  state: z.string().min(1, "State is required"),
+export const insertLocationSchema = z.object({
+  name: z.string().min(1, "Name is required"),
   latitude: z.number().optional().default(0),
   longitude: z.number().optional().default(0),
-  customFields: z.string().optional().default("{}"),
+  category: z.string().min(1, "Category is required"),
+  state: z.string().min(1, "State is required"),
+  city: z.string().min(1, "City is required"),
+  zipCode: z.string().optional().default(""),
   photoUrl: z.string().optional().default(""),
   photoId: z.string().optional().default(""),
   taggedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+  description: z.string().optional().default(""),
+  customFields: z.string().optional().default("{}"),
 });
 
 export type InsertLocation = z.infer<typeof insertLocationSchema>;
@@ -77,13 +75,7 @@ export const media = pgTable("media", {
   uploadedBy: text("uploaded_by").references(() => users.id),
 });
 
-export const insertMediaSchema = createInsertSchema(media).omit({
-  id: true,
-  uploadedAt: true,
-}).extend({
-  data: z.string().optional(),
-  storagePath: z.string().optional(),
-});
+export const insertMediaSchema = createInsertSchema(media);
 
 export type InsertMedia = z.infer<typeof insertMediaSchema>;
 export type Media = typeof media.$inferSelect;
@@ -96,9 +88,7 @@ export const settings = pgTable("settings", {
   updatedBy: text("updated_by").references(() => users.id),
 });
 
-export const insertSettingSchema = createInsertSchema(settings).omit({
-  updatedAt: true,
-});
+export const insertSettingSchema = createInsertSchema(settings);
 
 export type InsertSetting = z.infer<typeof insertSettingSchema>;
 export type Setting = typeof settings.$inferSelect;
@@ -121,11 +111,7 @@ export const categories = pgTable("categories", {
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const insertCategorySchema = createInsertSchema(categories).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+export const insertCategorySchema = createInsertSchema(categories);
 
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Category = typeof categories.$inferSelect;
