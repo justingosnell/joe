@@ -212,32 +212,15 @@ export default function Home() {
           <MediaSlideshow />
         </section>
 
-        {/* Call to Action */}
-        <section className="text-center py-12">
-          <Card className="border-2 border-primary bg-card shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-3xl text-foreground">
-                Know of an Offbeat Sight?
-              </CardTitle>
-              <CardDescription className="text-lg text-muted-foreground">
-                Help us document America's roadside wonders. Share your discoveries!
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8">
-                Submit a Tip
-              </Button>
-            </CardContent>
-          </Card>
-        </section>
+
       </main>
 
       {/* Footer */}
       <footer className="shape-divider bg-card border-t border-border text-foreground py-8 mt-12">
         <div className="container mx-auto px-4 text-center">
           <p className="text-lg mb-2">Brought to you by: Joe Bosse</p>
-          <p className="text-sm text-muted-foreground">
-            Documenting America's peculiar roadside attractions, one oddity at a time.
+          <p className="text-sm">
+            Email Me: joebosse76@gmail.com
           </p>
         </div>
       </footer>
