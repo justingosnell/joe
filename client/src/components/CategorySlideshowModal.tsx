@@ -153,11 +153,12 @@ export function CategorySlideshowModal({
               </Button>
             </div>
 
-            <div className="mt-4 text-muted-foreground">
+            <div className="mt-4 text-muted-foreground text-center">
+              <p className="text-xl font-bold text-foreground">
+                {currentLocation.name}
+              </p>
               <p className="text-sm">
-                <strong>{currentLocation.name}</strong>
-                {currentLocation.city && `, ${currentLocation.city}`}
-                {currentLocation.state && `, ${currentLocation.state}`}
+                {currentLocation.city}{currentLocation.city && currentLocation.state && ", "}{currentLocation.state}
               </p>
               {currentLocation.description && (
                 <p className="text-sm mt-1">{currentLocation.description}</p>

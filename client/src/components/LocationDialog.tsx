@@ -50,6 +50,7 @@ const US_STATES = [
   { abbr: "CA", name: "California" },
   { abbr: "CO", name: "Colorado" },
   { abbr: "CT", name: "Connecticut" },
+  { abbr: "DC", name: "District of Columbia" },
   { abbr: "DE", name: "Delaware" },
   { abbr: "FL", name: "Florida" },
   { abbr: "GA", name: "Georgia" },
@@ -259,7 +260,7 @@ export function LocationDialog({
   };
 
   const handleMediaSelect = (media: Media) => {
-    form.setValue("photoUrl", media.url);
+    form.setValue("photoUrl", media.url, { shouldDirty: true });
     setPreviewUrl(media.url);
     toast({
       title: "Image selected",
@@ -310,7 +311,7 @@ export function LocationDialog({
 
       const data = await response.json();
       
-      form.setValue("photoUrl", data.url);
+      form.setValue("photoUrl", data.url, { shouldDirty: true });
       setPreviewUrl(data.url);
       
       toast({
@@ -332,9 +333,27 @@ export function LocationDialog({
     }
   };
 
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && form.formState.isDirty) {
+      if (window.confirm("You have unsaved changes. Are you sure you want to discard them?")) {
+        onOpenChange(false);
+      }
+    } else {
+      onOpenChange(newOpen);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl h-[90vh] flex flex-col p-0">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent 
+        className="max-w-2xl h-[90vh] flex flex-col p-0"
+        onPointerDownOutside={(e) => {
+          e.preventDefault();
+        }}
+        onEscapeKeyDown={(e) => {
+          e.preventDefault();
+        }}
+      >
         <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
           <DialogTitle>
             {location ? "Edit Location" : "Add New Location"}

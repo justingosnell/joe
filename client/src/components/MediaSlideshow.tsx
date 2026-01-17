@@ -74,6 +74,7 @@ export function MediaSlideshow() {
   const currentLocation = images[currentIndex];
 
   return (
+    <>
     <div className="relative w-full h-52 md:h-80 lg:h-[450px] bg-transparent rounded-lg overflow-hidden group">
       {/* Main Image */}
       <div className="relative w-full h-full">
@@ -137,5 +138,14 @@ export function MediaSlideshow() {
         )}
       </Button>
     </div>
+    <div className="mt-4 text-muted-foreground text-center">
+      <p className="text-xl font-bold text-foreground">
+        {currentLocation.name}
+      </p>
+      <p className="text-sm">
+        {currentLocation.city}{currentLocation.city && currentLocation.state && ", "}{currentLocation.state}
+      </p>
+    </div>
+    </>
   );
 }

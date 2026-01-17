@@ -50,6 +50,7 @@ function normalizeStateName(stateCode: string): string {
     CA: "California",
     CO: "Colorado",
     CT: "Connecticut",
+    DC: "District of Columbia",
     DE: "Delaware",
     FL: "Florida",
     GA: "Georgia",
