@@ -137,6 +137,31 @@ function InteractiveMap({
 }: MapProps & { terrain?: "standard" | "satellite" }) {
   const { getColorBySlug } = useCategoryColors();
 
+  // Apply jittering to overlapping markers
+  const jitteredLocations = useMemo(() => {
+    const coordCount = new Map<string, number>();
+    
+    return locations.map(loc => {
+      // Use a fixed precision for coordinate matching
+      const key = `${loc.latitude.toFixed(5)},${loc.longitude.toFixed(5)}`;
+      const count = coordCount.get(key) || 0;
+      coordCount.set(key, count + 1);
+      
+      if (count === 0) return loc;
+      
+      // Apply a small spiral offset for overlapping markers
+      // ~0.0005 degrees is roughly 50 meters, enough to separate markers when zoomed out
+      const angle = count * (Math.PI * (3 - Math.sqrt(5))); // Golden angle for better distribution
+      const radius = 0.0004 * Math.sqrt(count); // Increasing radius
+      
+      return {
+        ...loc,
+        latitude: loc.latitude + Math.sin(angle) * radius,
+        longitude: loc.longitude + Math.cos(angle) * radius,
+      };
+    });
+  }, [locations]);
+
   const tileLayerConfig: Record<"standard" | "satellite", { url: string; attribution: string }> = {
     standard: {
       url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -164,7 +189,7 @@ function InteractiveMap({
 
       <MapController locations={locations} selectedLocation={selectedLocation} />
 
-      {locations.map((location) => (
+      {jitteredLocations.map((location) => (
         <Marker
           key={location.id}
           position={[location.latitude, location.longitude] as [number, number]}

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import L from "leaflet";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import type { Location } from "@shared/schema";
@@ -59,6 +59,28 @@ function MapController({ locations, selectedLocation }: { locations: Location[],
 export function USMap({ locations, activeCategory, selectedLocation, onLocationClick }: USMapProps) {
   const { getColorBySlug } = useCategoryColors();
 
+  // Apply jittering to overlapping markers
+  const jitteredLocations = useMemo(() => {
+    const coordCount = new Map<string, number>();
+    
+    return locations.map(loc => {
+      const key = `${loc.latitude.toFixed(5)},${loc.longitude.toFixed(5)}`;
+      const count = coordCount.get(key) || 0;
+      coordCount.set(key, count + 1);
+      
+      if (count === 0) return loc;
+      
+      const angle = count * (Math.PI * (3 - Math.sqrt(5)));
+      const radius = 0.0004 * Math.sqrt(count);
+      
+      return {
+        ...loc,
+        latitude: loc.latitude + Math.sin(angle) * radius,
+        longitude: loc.longitude + Math.cos(angle) * radius,
+      };
+    });
+  }, [locations]);
+
   return (
     <MapContainer
       center={[39.8283, -98.5795] as [number, number]}
@@ -73,7 +95,7 @@ export function USMap({ locations, activeCategory, selectedLocation, onLocationC
       
       <MapController locations={locations} selectedLocation={selectedLocation} />
 
-      {locations.map((location) => (
+      {jitteredLocations.map((location) => (
         <Marker
           key={location.id}
           position={[location.latitude, location.longitude] as [number, number]}
